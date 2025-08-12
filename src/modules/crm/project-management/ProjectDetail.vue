@@ -21,7 +21,7 @@
             </li>
           </ol>
         </nav>
-        
+
         <div class="project-title-section">
           <div class="project-icon" v-if="project" :style="{ backgroundColor: project.color }">
             <ListTodo :size="24" color="white" />
@@ -39,7 +39,7 @@
           </div>
         </div>
       </div>
-      
+
       <div class="header-actions" v-if="project">
         <button class="btn btn-outline-primary" @click="editProject" title="Редактировать проект">
           <Edit :size="16" />
@@ -85,7 +85,7 @@
               <div class="description-section">
                 <p class="description">{{ project.description || 'Описание отсутствует' }}</p>
               </div>
-              
+
               <div class="meta-grid">
                 <div class="meta-item">
                   <div class="meta-icon">
@@ -96,7 +96,7 @@
                     <span class="meta-value">{{ formatDate(project.start_date) || 'Не указана' }}</span>
                   </div>
                 </div>
-                
+
                 <div class="meta-item">
                   <div class="meta-icon">
                     <Clock :size="16" />
@@ -109,7 +109,7 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Статистика проекта -->
           <div class="info-card stats-card">
             <div class="card-header">
@@ -124,13 +124,13 @@
                   <span class="progress-value">{{ project.progress || 0 }}%</span>
                 </div>
                 <div class="progress-bar-container">
-                  <div class="progress-bar" 
+                  <div class="progress-bar"
                        :style="{ width: (project.progress || 0) + '%' }"
                        :class="getProgressClass(project.progress || 0)">
                   </div>
                 </div>
               </div>
-              
+
               <!-- Статистика задач -->
               <div class="stats-grid">
                 <div class="stat-item">
@@ -142,7 +142,7 @@
                     <div class="stat-label">Всего задач</div>
                   </div>
                 </div>
-                
+
                 <div class="stat-item">
                   <div class="stat-icon completed">
                     <CheckCircle :size="20" />
@@ -152,7 +152,7 @@
                     <div class="stat-label">Выполнено</div>
                   </div>
                 </div>
-                
+
                 <div class="stat-item">
                   <div class="stat-icon in-progress">
                     <Clock :size="20" />
@@ -165,7 +165,7 @@
               </div>
             </div>
           </div>
-          
+
           <!-- Команда проекта -->
           <div class="info-card team-card" v-if="project">
             <div class="card-header">
@@ -177,23 +177,18 @@
               </button>
             </div>
             <div class="card-body">
-
-              
               <div class="team-members">
                 <!-- Все участники команды проекта -->
-                <div class="team-member" 
-                     v-for="member in allProjectMembers" 
+                <div class="team-member"
+                     v-for="member in allProjectMembers"
                      :key="`team-member-${member.type}-${member.id}`">
-                  <img :src="getAvatarUrl(member.user)" 
-                       :alt="getUserDisplayName(member.user)"
-                       class="member-avatar">
                   <div class="member-info">
                     <div class="member-name">{{ getUserDisplayName(member.user) }}</div>
                     <div class="member-role" :class="member.roleClass">
                       {{ member.roleText }}
                       <span v-if="member.badges.length > 0" class="member-badges ms-2">
-                        <span v-for="badge in member.badges" 
-                              :key="badge.text" 
+                        <span v-for="badge in member.badges"
+                              :key="badge.text"
                               :class="badge.class"
                               class="badge me-1">
                           {{ badge.text }}
@@ -202,9 +197,9 @@
                     </div>
                   </div>
                   <div class="member-actions">
-                    <button class="btn btn-delete-icon" 
+                    <button class="btn btn-delete-icon"
                             v-if="member.canRemove"
-                            @click="removeMember(member.originalMember)" 
+                            @click="removeMember(member.originalMember)"
                             title="Исключить из команды">
                       <UserMinus :size="14" />
                     </button>
@@ -213,9 +208,9 @@
                     </span>
                   </div>
                 </div>
-                
+
                 <!-- Пустое состояние -->
-                <div v-if="allProjectMembers.length === 0" 
+                <div v-if="allProjectMembers.length === 0"
                      class="empty-team">
                   <Users :size="32" class="empty-icon" />
                   <p>В команде проекта пока нет участников</p>
@@ -225,7 +220,7 @@
                   </button>
                 </div>
               </div>
-              
+
             </div>
           </div>
         </div>
@@ -238,12 +233,19 @@
             <ListTodo :size="24" />
             <h2>Задачи проекта</h2>
           </div>
-          <button class="btn btn-primary" @click="createTask">
-            <Plus :size="16" />
-            <span>Добавить задачу</span>
-          </button>
+          <div class="section-actions">
+            <button class="btn btn-outline-primary" @click="toggleTaskView">
+              <GitBranch :size="16" v-if="!showTaskTree" />
+              <ListTodo :size="16" v-else />
+              <span>{{ showTaskTree ? 'Список' : 'Дерево' }}</span>
+            </button>
+            <button class="btn btn-primary" @click="createTask">
+              <Plus :size="16" />
+              <span>Добавить задачу</span>
+            </button>
+          </div>
         </div>
-        
+
         <div class="tasks-content">
           <!-- Пустое состояние -->
           <div v-if="tasks.length === 0" class="empty-state">
@@ -255,12 +257,16 @@
               <span>Создать первую задачу</span>
             </button>
           </div>
-          
-          <!-- Таблица задач -->
-          <div v-else class="tasks-table-container">
-            <div class="table-responsive">
-              <table class="tasks-table">
-                <thead>
+
+          <!-- Таблица задач или дерево -->
+          <div v-else>
+            <div v-if="showTaskTree" class="task-tree-container">
+              <ProjectTasksTree :project="project" :tasks="tasks" />
+            </div>
+            <div v-else class="tasks-table-container">
+              <div class="table-responsive">
+                <table class="tasks-table">
+                  <thead>
                   <tr>
                     <th>Задача</th>
                     <th>Исполнитель</th>
@@ -269,8 +275,8 @@
                     <th>Срок</th>
                     <th>Действия</th>
                   </tr>
-                </thead>
-                <tbody>
+                  </thead>
+                  <tbody>
                   <tr v-for="task in tasks" :key="task.id" class="task-row">
                     <td class="task-cell">
                       <div class="task-info">
@@ -282,31 +288,38 @@
                     </td>
                     <td class="assignee-cell">
                       <div class="assignee-info" v-if="task.assignee">
-                        <img :src="getAvatarUrl(task.assignee)" 
-                             :alt="getUserDisplayName(task.assignee)"
-                             class="assignee-avatar">
                         <span class="assignee-name">{{ getUserDisplayName(task.assignee) }}</span>
                       </div>
                       <span v-else class="no-assignee">Не назначен</span>
                     </td>
                     <td class="status-cell">
-                      <span class="badge status-badge" :class="getTaskStatusClass(task.status)">
-                        {{ getTaskStatusText(task.status) }}
-                      </span>
+                        <span class="badge status-badge" :class="getTaskStatusClass(task.status)">
+                          {{ getTaskStatusText(task.status) }}
+                        </span>
                     </td>
                     <td class="priority-cell">
-                      <span class="badge priority-badge" :class="getPriorityClass(task.priority)">
-                        {{ getPriorityText(task.priority) }}
-                      </span>
+                        <span class="badge priority-badge" :class="getPriorityClass(task.priority)">
+                          {{ getPriorityText(task.priority) }}
+                        </span>
                     </td>
                     <td class="due-date-cell">
-                      <span :class="getDueDateClass(task.due_date, task.status)">
-                        <Clock :size="14" />
-                        {{ formatDate(task.due_date) || '-' }}
-                      </span>
+                        <span :class="getDueDateClass(task.due_date, task.status)">
+                          <Clock :size="14" />
+                          {{ formatDate(task.due_date) || '-' }}
+                        </span>
                     </td>
                     <td class="actions-cell">
                       <div class="action-buttons">
+                        <!-- Новый: чат/комментарии -->
+                        <button class="btn btn-edit-icon" @click="openComments(task)" title="Комментарии">
+                          <div class="position-relative d-inline-flex align-items-center justify-center">
+                            <MessageSquare :size="14" />
+                          </div>
+                        </button>
+
+                        <button class="btn btn-edit-icon" @click="createSubTask(task)" title="Добавить подзадачу">
+                          <Plus :size="14" />
+                        </button>
                         <button class="btn btn-edit-icon" @click="editTask(task)" title="Редактировать">
                           <Edit :size="14" />
                         </button>
@@ -316,15 +329,16 @@
                       </div>
                     </td>
                   </tr>
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Модальные окна остаются без изменений -->
+    <!-- Модальные окна -->
     <!-- Модальное окно редактирования проекта -->
     <div class="modal fade" id="projectModal" tabindex="-1" aria-labelledby="projectModalLabel" aria-hidden="true">
       <div class="modal-dialog">
@@ -385,6 +399,53 @@
                 <label class="form-label">Цвет проекта</label>
                 <input type="color" class="form-control form-control-color" v-model="currentProject.color">
               </div>
+              <!-- Кастомные поля проекта -->
+              <div class="row g-3 mb-4" v-if="projectFieldSettings.length">
+                <template v-for="field in projectFieldSettings" :key="field.name">
+                  <div class="col-md-6" v-if="field.visible !== false">
+                    <label class="form-label fw-bold">
+                      {{ field.label }}
+                      <span v-if="field.required" class="text-danger">*</span>
+                    </label>
+
+                    <input
+                      v-if="['text','number','date','datetime'].includes(field.type)"
+                      :type="field.type === 'datetime' ? 'datetime-local' : field.type"
+                      class="form-control"
+                      v-model="dynamicProjectFields[field.name]"
+                      :required="field.required"
+                    />
+
+                    <textarea
+                      v-else-if="field.type === 'textarea'"
+                      class="form-control"
+                      rows="3"
+                      v-model="dynamicProjectFields[field.name]"
+                      :required="field.required"
+                    />
+
+                    <div v-else-if="field.type === 'checkbox'" class="form-check mt-2">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        :id="`fld_${field.name}`"
+                        v-model="dynamicProjectFields[field.name]"
+                      >
+                      <label class="form-check-label" :for="`fld_${field.name}`">
+                        {{ field.label }}
+                      </label>
+                    </div>
+
+                    <input
+                      v-else
+                      type="text"
+                      class="form-control"
+                      v-model="dynamicProjectFields[field.name]"
+                      :required="field.required"
+                    />
+                  </div>
+                </template>
+              </div>
             </form>
           </div>
           <div class="modal-footer">
@@ -428,12 +489,12 @@
                   </div>
                 </div>
               </div>
-              
+
               <div class="mb-3">
                 <label class="form-label">Описание</label>
                 <textarea class="form-control" rows="3" v-model="currentTask.description"></textarea>
               </div>
-              
+
               <div class="row">
                 <div class="col-md-6">
                   <div class="mb-3">
@@ -458,7 +519,7 @@
                   </div>
                 </div>
               </div>
-              
+
               <div class="row">
                 <div class="col-md-4">
                   <div class="mb-3">
@@ -478,6 +539,54 @@
                     <input type="number" class="form-control" step="0.5" v-model="currentTask.estimated_hours">
                   </div>
                 </div>
+              </div>
+
+              <!-- Кастомные поля задачи -->
+              <div class="row g-3 mb-4" v-if="taskFieldSettings.length">
+                <template v-for="field in taskFieldSettings" :key="field.name">
+                  <div class="col-md-6" v-if="field.visible !== false">
+                    <label class="form-label fw-bold">
+                      {{ field.label }}
+                      <span v-if="field.required" class="text-danger">*</span>
+                    </label>
+
+                    <input
+                      v-if="['text','number','date','datetime'].includes(field.type)"
+                      :type="field.type === 'datetime' ? 'datetime-local' : field.type"
+                      class="form-control"
+                      v-model="dynamicTaskFields[field.name]"
+                      :required="field.required"
+                    />
+
+                    <textarea
+                      v-else-if="field.type === 'textarea'"
+                      class="form-control"
+                      rows="3"
+                      v-model="dynamicTaskFields[field.name]"
+                      :required="field.required"
+                    />
+
+                    <div v-else-if="field.type === 'checkbox'" class="form-check mt-2">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        :id="`fld_${field.name}`"
+                        v-model="dynamicTaskFields[field.name]"
+                      >
+                      <label class="form-check-label" :for="`fld_${field.name}`">
+                        {{ field.label }}
+                      </label>
+                    </div>
+
+                    <input
+                      v-else
+                      type="text"
+                      class="form-control"
+                      v-model="dynamicTaskFields[field.name]"
+                      :required="field.required"
+                    />
+                  </div>
+                </template>
               </div>
             </form>
           </div>
@@ -508,8 +617,8 @@
                     <label class="form-label">Выберите пользователя</label>
                     <select class="form-select" v-model="selectedUserId">
                       <option value="">Выберите пользователя</option>
-                      <option v-for="user in availableUsers" 
-                              :key="user.id" 
+                      <option v-for="user in availableUsers"
+                              :key="user.id"
                               :value="user.id">
                         {{ getUserDisplayName(user) }}
                       </option>
@@ -523,8 +632,8 @@
                       <option value="observer">Наблюдатель</option>
                     </select>
                   </div>
-                  <button class="btn btn-primary" 
-                          @click="addMember" 
+                  <button class="btn btn-primary"
+                          @click="addMember"
                           :disabled="!selectedUserId || loadingTeamAction">
                     <i v-if="loadingTeamAction" class="fas fa-spinner fa-spin me-2"></i>
                     Добавить в команду
@@ -534,35 +643,22 @@
               <div class="col-md-6">
                 <h6 class="mb-2">Текущая команда</h6>
                 <div class="current-team">
-                  
-                  <!-- Владелец -->
                   <div class="team-member-modal" v-if="project && project.owner">
-                    <img :src="getAvatarUrl(project.owner)" 
-                         :alt="getUserDisplayName(project.owner)"
-                         class="member-avatar-small">
                     <div class="member-info-modal">
                       <div class="member-name">{{ getUserDisplayName(project.owner) }}</div>
                       <div class="member-role owner-role">Владелец</div>
                     </div>
                   </div>
-                  
-                  <!-- Менеджер -->
+
                   <div class="team-member-modal" v-if="project && project.manager && project.manager.id !== project.owner?.id">
-                    <img :src="getAvatarUrl(project.manager)" 
-                         :alt="getUserDisplayName(project.manager)"
-                         class="member-avatar-small">
                     <div class="member-info-modal">
                       <div class="member-name">{{ getUserDisplayName(project.manager) }}</div>
                       <div class="member-role manager-role">Менеджер проекта</div>
                     </div>
                   </div>
-                  
-                  <!-- Участники -->
+
                   <template v-for="member in filteredTeamMembers" :key="member.id">
                     <div class="team-member-modal" v-if="member && member.user">
-                      <img :src="getAvatarUrl(member.user)" 
-                           :alt="getUserDisplayName(member.user)"
-                           class="member-avatar-small">
                       <div class="member-info-modal">
                         <div class="member-name">{{ getUserDisplayName(member.user) }}</div>
                         <div class="member-role" :class="getRoleClass(member.role)">{{ getRoleText(member.role) }}</div>
@@ -572,8 +668,8 @@
                       </button>
                     </div>
                   </template>
-                  
-                  <div v-if="project && filteredTeamMembers.length === 0 && !project.owner && !project.manager" 
+
+                  <div v-if="project && filteredTeamMembers.length === 0 && !project.owner && !project.manager"
                        class="text-muted text-center">
                     <small>Пока нет участников</small>
                   </div>
@@ -588,15 +684,98 @@
         </div>
       </div>
     </div>
+
+    <!-- Модалка комментариев задачи -->
+    <div class="modal fade" id="taskCommentsModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              Комментарии — <span class="text-muted">{{ commentsModalTask?.title || 'Задача' }}</span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" />
+          </div>
+
+          <div class="modal-body p-0">
+            <div class="chat-wrap">
+              <div v-if="commentsLoading" class="p-4 text-center text-muted">Загрузка…</div>
+
+              <div v-else-if="!comments.length" class="p-4 text-center text-muted">
+                Пока нет комментариев — будьте первым!
+              </div>
+
+              <div v-else class="chat-thread p-3">
+                <div v-for="c in comments" :key="c.id"
+                     class="chat-msg"
+                     :class="{ mine: isMyComment(c) }">
+                  <div class="chat-bubble">
+                    <div class="chat-meta">
+                      <strong>{{ getUserDisplayName(commentUser(c)) }}</strong>
+                      <small class="text-muted ms-2">{{ formatDateTime(c.created_at || c.created) }}</small>
+                    </div>
+
+                    <div v-if="editingCommentId === c.id" class="mt-1">
+                      <textarea class="form-control" rows="2" v-model="editingContent"></textarea>
+                      <div class="d-flex gap-2 mt-2">
+                        <button class="btn btn-sm btn-primary"
+                                :disabled="!editingContent || updatingCommentId === c.id"
+                                @click="saveEditedComment(c)">
+                          <i v-if="updatingCommentId === c.id" class="fas fa-spinner fa-spin me-1"></i>
+                          Сохранить
+                        </button>
+                        <button class="btn btn-sm btn-light" @click="cancelEditComment()">Отмена</button>
+                      </div>
+                    </div>
+
+                    <div v-else class="chat-content" v-text="c.content"></div>
+
+                    <div class="chat-actions" v-if="isMyComment(c) && editingCommentId !== c.id">
+                      <button class="btn btn-link btn-sm p-0 me-3" @click="startEditComment(c)">Изменить</button>
+                      <button class="btn btn-link btn-sm p-0 text-danger"
+                              :disabled="deletingCommentId === c.id"
+                              @click="deleteComment(c)">
+                        <i v-if="deletingCommentId === c.id" class="fas fa-spinner fa-spin me-1"></i>
+                        Удалить
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div> <!-- /thread -->
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <div class="w-100 d-flex align-items-end gap-2">
+              <textarea class="form-control" rows="2" v-model="newComment"
+                        placeholder="Напишите комментарий…"
+                        @keydown.enter.exact.prevent="sendComment"
+                        @keydown.enter.shift.stop></textarea>
+              <button class="btn btn-primary"
+                      :disabled="!newComment.trim() || sendingComment"
+                      @click="sendComment">
+                <i v-if="sendingComment" class="fas fa-spinner fa-spin me-1"></i>
+                Отправить
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- /Модалка комментариев -->
   </div>
 </template>
 
 <script>
 import { Modal } from 'bootstrap'
-import { Edit, Trash2, Plus, Home, Info, PieChart, ListTodo, Calendar, Clock, Users, CheckCircle, AlertTriangle, UserPlus, UserMinus } from 'lucide-vue-next'
+import {
+  Edit, Trash2, Plus, Home, Info, PieChart, ListTodo, Calendar, Clock, Users,
+  CheckCircle, AlertTriangle, UserPlus, UserMinus, GitBranch, MessageSquare
+} from 'lucide-vue-next'
 import projectManagementApi from '@/modules/crm/project-management/js/projectManagementApi.js'
 import { useNotifications } from '@/modules/lms/composables/useNotifications'
-import { getAvatarUrl } from '@/modules/cms/js/avatarUtils.js'
+import ProjectTasksTree from './ProjectTasksTree.vue'
+import fieldsSettingsApi from '@/modules/crm/project-management/js/fieldsSettingsApi.js'
+import Cookies from 'js-cookie'
 
 export default {
   name: 'ProjectDetail',
@@ -614,7 +793,10 @@ export default {
     CheckCircle,
     AlertTriangle,
     UserPlus,
-    UserMinus
+    UserMinus,
+    GitBranch,
+    MessageSquare,
+    ProjectTasksTree
   },
   setup() {
     const { showSuccess, showError, showConfirmDialog, closeConfirmDialog } = useNotifications()
@@ -626,8 +808,10 @@ export default {
       error: null,
       project: null,
       tasks: [],
+      showTaskTree: false,
       users: [],
       currentTask: {
+        organization_id: '',
         title: '',
         description: '',
         assignee_id: '',
@@ -635,7 +819,8 @@ export default {
         priority: 'medium',
         start_date: '',
         due_date: '',
-        estimated_hours: null
+        estimated_hours: null,
+        parent_id: null
       },
       currentProject: {
         name: '',
@@ -657,97 +842,92 @@ export default {
       // Управление командой проекта
       selectedUserId: '',
       selectedRole: 'member',
-      loadingTeamAction: false
+      loadingTeamAction: false,
+      // схема и значения кастомных полей проекта
+      projectFieldSettings: [],
+      dynamicProjectFields: {},
+      loadingProjectFields: false,
+      // схема и значения кастомных полей задач
+      taskFieldSettings: [],
+      dynamicTaskFields: {},
+      loadingTaskFields: false,
+
+      // Чат комментариев
+      commentsModalTask: null,
+      comments: [],
+      commentsLoading: false,
+      sendingComment: false,
+      updatingCommentId: null,
+      deletingCommentId: null,
+      newComment: '',
+      editingCommentId: null,
+      editingContent: '',
+      currentUserId: null,
+
+      ws: null,
     }
   },
   async mounted() {
+    this.currentUserId = this.extractUserIdFromToken()
     await Promise.all([
       this.loadUsers(),
       this.loadStatusesAndPriorities()
     ])
     this.loadProjectData()
   },
+  beforeUnmount() {
+    this.closeCommentsWS()
+  },
   computed: {
     availableUsers() {
       if (!this.users || !this.project) return []
-      
-      // Исключаем пользователей, которые уже в команде
+
       const teamUserIds = new Set()
-      
-      // Добавляем владельца и менеджера (с проверкой на существование)
       if (this.project?.owner?.id) teamUserIds.add(this.project.owner.id)
       if (this.project?.manager?.id) teamUserIds.add(this.project.manager.id)
-      
-      // Добавляем участников команды
+
       if (this.project?.memberships && Array.isArray(this.project.memberships)) {
         this.project.memberships.forEach(member => {
-          if (member && 
-              typeof member === 'object' && 
-              member.user && 
-              typeof member.user === 'object' && 
-              member.user.id) {
-            teamUserIds.add(member.user.id)
-          }
+          if (member?.user?.id) teamUserIds.add(member.user.id)
         })
       }
-      
-      // Возвращаем пользователей, которых нет в команде
       return this.users.filter(user => user?.id && !teamUserIds.has(user.id))
     },
 
     allTeamMembers() {
       if (!this.project?.memberships || !Array.isArray(this.project.memberships)) return []
-      
-      return this.project.memberships.filter(member => {
-        // Строгая проверка валидности участника
-        return member && 
-               typeof member === 'object' && 
-               member.user && 
-               typeof member.user === 'object' && 
-               member.user.id && 
-               member.id
-      })
+      return this.project.memberships.filter(m => m?.user?.id && m?.id)
     },
 
     filteredTeamMembers() {
       if (!this.project?.memberships || !Array.isArray(this.project.memberships)) return []
-      
       return this.project.memberships.filter(member => {
-        // Строгая проверка валидности member
-        if (!member || typeof member !== 'object') return false
-        if (!member.user || typeof member.user !== 'object') return false
-        if (!member.user.id || !member.id) return false
-        
-        // Исключаем владельца и менеджера (они отображаются отдельно)
+        if (!member?.user?.id || !member?.id) return false
         const isOwner = this.project.owner?.id === member.user.id
         const isManager = this.project.manager?.id === member.user.id
-        
         return !isOwner && !isManager
       })
     },
 
     allProjectMembers() {
       if (!this.project) return []
-      
       const members = []
       const processedUserIds = new Set()
-      
-             // 1. Добавляем владельца (если есть)
-       if (this.project.owner) {
-         members.push({
-           id: `owner-${this.project.owner.id}`,
-           type: 'owner',
-           user: this.project.owner,
-           roleText: 'Владелец проекта',
-           roleClass: 'owner-role',
-           badges: [],
-           canRemove: false,
-           originalMember: null
-         })
-         processedUserIds.add(this.project.owner.id)
-       }
-      
-      // 2. Добавляем менеджера (если есть и не совпадает с владельцем)
+
+      if (this.project.owner) {
+        members.push({
+          id: `owner-${this.project.owner.id}`,
+          type: 'owner',
+          user: this.project.owner,
+          roleText: 'Владелец проекта',
+          roleClass: 'owner-role',
+          badges: [],
+          canRemove: false,
+          originalMember: null
+        })
+        processedUserIds.add(this.project.owner.id)
+      }
+
       if (this.project.manager && !processedUserIds.has(this.project.manager.id)) {
         members.push({
           id: `manager-${this.project.manager.id}`,
@@ -761,39 +941,26 @@ export default {
         })
         processedUserIds.add(this.project.manager.id)
       }
-      
-      // 3. Добавляем всех участников команды
+
       if (this.project.memberships && Array.isArray(this.project.memberships)) {
         this.project.memberships.forEach(member => {
-          if (member && 
-              typeof member === 'object' && 
-              member.user && 
-              typeof member.user === 'object' && 
-              member.user.id && 
-              member.id) {
-            const badges = []
-            let roleText = this.getRoleText(member.role)
-            let roleClass = this.getRoleClass(member.role)
-            
-            // Если пользователь уже обработан как владелец/менеджер, добавляем дополнительные бейджи
+          if (member?.user?.id && member?.id) {
             if (processedUserIds.has(member.user.id)) {
-              // Находим существующего участника и добавляем дополнительную роль
-              const existingMember = members.find(m => m.user.id === member.user.id)
-              if (existingMember) {
-                existingMember.badges.push({
+              const existing = members.find(m => m.user.id === member.user.id)
+              if (existing) {
+                existing.badges.push({
                   text: this.getRoleText(member.role),
                   class: this.getRoleBadgeClass(member.role)
                 })
-                existingMember.originalMember = member // Сохраняем для возможного удаления
+                existing.originalMember = member
               }
             } else {
-              // Добавляем как нового участника
               members.push({
                 id: `member-${member.id}`,
                 type: 'member',
                 user: member.user,
-                roleText: roleText,
-                roleClass: roleClass,
+                roleText: this.getRoleText(member.role),
+                roleClass: this.getRoleClass(member.role),
                 badges: [],
                 canRemove: true,
                 originalMember: member
@@ -803,7 +970,6 @@ export default {
           }
         })
       }
-      
       return members
     }
   },
@@ -813,26 +979,167 @@ export default {
     }
   },
   methods: {
+    closeCommentsWS() {
+      if (!this.ws) return
+      try {
+        this.ws.onopen = this.ws.onmessage = this.ws.onerror = this.ws.onclose = null
+        if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+          this.ws.close(1000, 'modal-closed')
+        }
+      } catch (e) {
+        // ignore
+      } finally {
+        this.ws = null
+      }
+    },
+    // ===== Комментарии / чат =====
+    extractUserIdFromToken() {
+      try {
+        const t = Cookies.get('token')
+        if (!t) return null
+        const parts = t.split('.')
+        if (parts.length < 2) return null
+        const pad = (s) => s + '='.repeat((4 - (s.length % 4)) % 4)
+        const base64 = pad(parts[1]).replace(/-/g, '+').replace(/_/g, '/')
+        const json = atob(base64)
+        const payload = JSON.parse(json)
+        return payload.user_id || payload.id || payload.sub || null
+      } catch { return null }
+    },
+    commentUser(c) {
+      return c?.author || c?.user || {}
+    },
+    isMyComment(c) {
+      const u = this.commentUser(c);
+      return !!this.currentUserId && (u?.id == this.currentUserId)
+    },
+    formatDateTime(v) { if (!v) return ''; return new Date(v).toLocaleString('ru-RU') },
+
+    async openComments(task) {
+      this.closeCommentsWS()
+
+      this.commentsModalTask = task
+      this.newComment = ''
+      this.editingCommentId = null
+      await this.loadTaskComments(task.id)
+      const modalEl = document.getElementById('taskCommentsModal')
+      const modal = new Modal(modalEl)
+      modal.show()
+
+      // при закрытии модалки — закрываем сокет (one-time слушатель)
+      modalEl.addEventListener('hidden.bs.modal', () => {
+        this.closeCommentsWS()
+      }, { once: true })
+
+      const API_BASE_URL =
+        import.meta.env.VITE_API_BASE_URL ||
+        `http://${import.meta.env.VITE_API_HOST || 'localhost'}:${import.meta.env.VITE_API_PORT || '8000'}/api`
+
+      this.ws = new WebSocket(API_BASE_URL.replace(/^http/, 'ws') + `/crm/ws/tasks/${task.id}/comments/`)
+
+      this.ws.onmessage = async (e) => {
+        const { event, payload } = JSON.parse(e.data)
+        if (event === 'comment.created' || event === 'comment.updated' || event === 'comment.deleted') {
+          await this.loadTaskComments(task.id)
+        }
+      }
+
+      this.$nextTick(() => this.scrollCommentsToEnd())
+    },
+    async loadTaskComments(taskId) {
+      try {
+        this.commentsLoading = true
+        const { data } = await projectManagementApi.getTaskComments(taskId)
+        this.comments = Array.isArray(data?.results) ? data.results : (Array.isArray(data) ? data : [])
+      } catch (e) {
+        console.error('Не удалось загрузить комментарии', e)
+        this.comments = []
+      } finally {
+        this.commentsLoading = false
+      }
+    },
+    async sendComment() {
+      const text = (this.newComment || '').trim()
+      if (!text || !this.commentsModalTask?.id) return
+      try {
+        this.sendingComment = true
+        await projectManagementApi.addTaskComment(this.commentsModalTask.id, text)
+        this.newComment = ''
+        await this.loadTaskComments(this.commentsModalTask.id)
+        this.$nextTick(() => this.scrollCommentsToEnd())
+      } catch (e) {
+        console.error('Ошибка отправки комментария', e)
+        this.showError('Не удалось отправить комментарий')
+      } finally {
+        this.sendingComment = false
+      }
+    },
+    startEditComment(c) { this.editingCommentId = c.id; this.editingContent = c.content },
+    cancelEditComment() { this.editingCommentId = null; this.editingContent = '' },
+    async saveEditedComment(c) {
+      if (!this.editingContent.trim()) return
+      try {
+        this.updatingCommentId = c.id
+        await projectManagementApi.updateTaskComment(c.id, { content: this.editingContent.trim() })
+        this.editingCommentId = null
+        this.editingContent = ''
+        await this.loadTaskComments(this.commentsModalTask.id)
+      } catch (e) {
+        console.error('Ошибка обновления комментария', e)
+        this.showError('Не удалось обновить комментарий')
+      } finally {
+        this.updatingCommentId = null
+      }
+    },
+    async deleteComment(c) {
+      const yes = await this.showConfirmDialog({
+        title: 'Удаление комментария',
+        message: 'Удалить комментарий?',
+        confirmText: 'Удалить',
+        cancelText: 'Отмена',
+        variant: 'danger'
+      })
+      if (!yes) {
+        this.closeConfirmDialog();
+        return
+      }
+      try {
+        this.deletingCommentId = c.id
+        await projectManagementApi.deleteTaskComment(c.id)
+        this.closeConfirmDialog()
+        await this.loadTaskComments(this.commentsModalTask.id)
+      } catch (e) {
+        console.error('Ошибка удаления комментария', e)
+        this.closeConfirmDialog()
+        this.showError('Не удалось удалить комментарий')
+      } finally {
+        this.deletingCommentId = null
+      }
+    },
+    scrollCommentsToEnd() {
+      const body = document.querySelector('#taskCommentsModal .modal-body')
+      if (body) body.scrollTop = body.scrollHeight
+    },
+
+    // ===== Остальной функционал =====
+    toggleTaskView() {
+      this.showTaskTree = !this.showTaskTree
+    },
     async loadProjectData() {
       const projectId = this.$route.params.id
       if (!projectId) {
         this.error = 'ID проекта не указан'
         return
       }
-
       this.loading = true
       this.error = null
-
       try {
-        // Загружаем данные проекта
         const response = await projectManagementApi.getProject(projectId)
         this.project = response.data
 
-        // Загружаем задачи проекта
         const tasksResponse = await projectManagementApi.getProjectTasks(projectId)
         this.tasks = Array.isArray(tasksResponse.data) ? tasksResponse.data.filter(task => task && task.id) : []
-        
-        // Обновляем прогресс проекта
+
         this.updateProjectProgress()
       } catch (error) {
         console.error('Ошибка загрузки проекта:', error)
@@ -845,10 +1152,8 @@ export default {
     async loadUsers() {
       try {
         const response = await projectManagementApi.getUsers()
-        const users = Array.isArray(response.data.results) ? response.data.results : 
-                      Array.isArray(response.data) ? response.data : []
-        
-        // Фильтруем только валидных пользователей
+        const users = Array.isArray(response.data.results) ? response.data.results :
+          Array.isArray(response.data) ? response.data : []
         this.users = users.filter(user => user && user.id)
       } catch (error) {
         console.error('Ошибка загрузки пользователей:', error)
@@ -865,25 +1170,24 @@ export default {
           projectManagementApi.getTaskStatuses(),
           projectManagementApi.getTaskPriorities()
         ])
-        
-        this.projectStatuses = Array.isArray(projectStatusesRes.data) ? 
-          projectStatusesRes.data.filter(s => s.is_active) : 
+
+        this.projectStatuses = Array.isArray(projectStatusesRes.data) ?
+          projectStatusesRes.data.filter(s => s.is_active) :
           (projectStatusesRes.data.results || []).filter(s => s.is_active)
-          
-        this.projectPriorities = Array.isArray(projectPrioritiesRes.data) ? 
-          projectPrioritiesRes.data.filter(p => p.is_active) : 
+
+        this.projectPriorities = Array.isArray(projectPrioritiesRes.data) ?
+          projectPrioritiesRes.data.filter(p => p.is_active) :
           (projectPrioritiesRes.data.results || []).filter(p => p.is_active)
 
-        this.taskStatuses = Array.isArray(taskStatusesRes.data) ? 
-          taskStatusesRes.data.filter(s => s.is_active) : 
+        this.taskStatuses = Array.isArray(taskStatusesRes.data) ?
+          taskStatusesRes.data.filter(s => s.is_active) :
           (taskStatusesRes.data.results || []).filter(s => s.is_active)
-          
-        this.taskPriorities = Array.isArray(taskPrioritiesRes.data) ? 
-          taskPrioritiesRes.data.filter(p => p.is_active) : 
+
+        this.taskPriorities = Array.isArray(taskPrioritiesRes.data) ?
+          taskPrioritiesRes.data.filter(p => p.is_active) :
           (taskPrioritiesRes.data.results || []).filter(p => p.is_active)
       } catch (error) {
         console.error('Ошибка загрузки статусов и приоритетов:', error)
-        // Fallback к жестко заданным значениям
         this.projectStatuses = [
           { id: 1, name: 'Планирование', code: 'planning' },
           { id: 2, name: 'Активный', code: 'active' },
@@ -915,9 +1219,9 @@ export default {
       }
     },
 
-    editProject() {
+    async editProject() {
       if (!this.project) return
-      
+
       this.isEditingProject = true
       this.currentProject = {
         id: this.project.id,
@@ -929,20 +1233,26 @@ export default {
         priority: this.project.priority,
         color: this.project.color
       }
-      
+
+      await this.loadProjectFieldSettings()
+      this.dynamicProjectFields = this.initDynamicFromSettings(
+        this.projectFieldSettings,
+        this.project?.custom_fields || {}
+      )
+
       const modal = new Modal(document.getElementById('projectModal'))
       modal.show()
     },
 
-    createTask() {
+    async createTask(parentTask = null) {
       if (!this.project) return
-      
-      // Устанавливаем значения по умолчанию из загруженных данных
+
       const defaultTaskStatus = this.taskStatuses.find(s => s.is_default) || this.taskStatuses[0]
       const defaultTaskPriority = this.taskPriorities.find(p => p.is_default) || this.taskPriorities[0]
-      
+
       this.isEditingTask = false
       this.currentTask = {
+        organization_id: this.project.organization.id,
         title: '',
         description: '',
         project_id: this.project.id,
@@ -951,17 +1261,24 @@ export default {
         priority: defaultTaskPriority ? defaultTaskPriority.code : 'medium',
         start_date: '',
         due_date: '',
-        estimated_hours: null
+        estimated_hours: null,
+        parent_id: parentTask ? parentTask.id : null
       }
-      
+
+      await this.loadTaskFieldSettings()
+      this.dynamicTaskFields = this.initDynamicFromSettings(this.taskFieldSettings, {})
+
       const modal = new Modal(document.getElementById('taskModal'))
       modal.show()
     },
 
-    editTask(task) {
+    createSubTask(task) { this.createTask(task) },
+
+    async editTask(task) {
       this.isEditingTask = true
       this.currentTask = {
         id: task.id,
+        organization_id: task.organization_id,
         title: task.title,
         description: task.description,
         project_id: task.project?.id || this.project.id,
@@ -970,113 +1287,92 @@ export default {
         priority: task.priority,
         start_date: task.start_date ? this.formatDateTimeLocal(new Date(task.start_date)) : '',
         due_date: task.due_date ? this.formatDateTimeLocal(new Date(task.due_date)) : '',
-        estimated_hours: task.estimated_hours
+        estimated_hours: task.estimated_hours,
+        parent_id: task.parent || null
       }
-      
+
+      await this.loadTaskFieldSettings()
+      this.dynamicTaskFields = this.initDynamicFromSettings(
+        this.taskFieldSettings,
+        task.custom_fields || {}
+      )
+
       const modal = new Modal(document.getElementById('taskModal'))
       modal.show()
     },
 
-    deleteTask(task) {
-      this.confirmDeleteTask(task)
-    },
+    deleteTask(task) { this.confirmDeleteTask(task) },
 
     async submitProject() {
       try {
-        // Подготавливаем данные проекта
         const projectData = {
           ...this.currentProject,
-          // Конвертируем пустые строки в null для дат
           start_date: this.currentProject.start_date || null,
-          end_date: this.currentProject.end_date || null
+          end_date: this.currentProject.end_date || null,
+          custom_fields: this.dynamicProjectFields || {}
         }
-        
         await projectManagementApi.updateProject(projectData.id, projectData)
-        
-        // Закрываем модальное окно
+
         const modal = Modal.getInstance(document.getElementById('projectModal'))
-        if (modal) {
-          modal.hide()
-        }
-        
-        // Перезагружаем данные проекта
+        if (modal) modal.hide()
+
         await this.loadProjectData()
-        
         this.showSuccess('Проект успешно обновлен!')
       } catch (error) {
         console.error('Ошибка обновления проекта:', error)
-        
         let errorMessage = 'Ошибка обновления проекта'
         if (error.response?.data) {
           if (typeof error.response.data === 'object') {
             const errors = []
             for (const [field, messages] of Object.entries(error.response.data)) {
-              if (Array.isArray(messages)) {
-                errors.push(`${field}: ${messages.join(', ')}`)
-              } else {
-                errors.push(`${field}: ${messages}`)
-              }
+              if (Array.isArray(messages)) errors.push(`${field}: ${messages.join(', ')}`)
+              else errors.push(`${field}: ${messages}`)
             }
-            if (errors.length > 0) {
-              errorMessage += ':\n' + errors.join('\n')
-            }
-          } else {
-            errorMessage += ': ' + error.response.data
-          }
+            if (errors.length > 0) errorMessage += ':\n' + errors.join('\n')
+          } else errorMessage += ': ' + error.response.data
         }
-        
         this.showError(errorMessage)
       }
     },
 
     async submitTask() {
       try {
-        // Подготавливаем данные задачи, конвертируя пустые строки в null
         const taskData = {
           ...this.currentTask,
+          organization_id: this.currentTask.organization_id || null,
           project_id: this.currentTask.project_id || null,
           assignee_id: this.currentTask.assignee_id || null,
           start_date: this.currentTask.start_date || null,
           due_date: this.currentTask.due_date || null,
-          estimated_hours: this.currentTask.estimated_hours || null
+          estimated_hours: this.currentTask.estimated_hours || null,
+          parent_id: this.currentTask.parent_id || null,
+          custom_fields: this.dynamicTaskFields || {}
         }
-        
+
         if (this.isEditingTask) {
           await projectManagementApi.updateTask(taskData.id, taskData)
         } else {
           await projectManagementApi.createTask(taskData)
         }
-        
-        // Закрываем модальное окно
+
         const modal = Modal.getInstance(document.getElementById('taskModal'))
         if (modal) modal.hide()
-        
-        // Перезагружаем данные проекта
+
         await this.loadProjectData()
-        
         this.showSuccess(this.isEditingTask ? 'Задача обновлена' : 'Задача создана')
       } catch (error) {
         console.error('Ошибка сохранения задачи:', error)
-        
         let errorMessage = 'Ошибка сохранения задачи'
         if (error.response?.data) {
           if (typeof error.response.data === 'object') {
             const errors = []
             for (const [field, messages] of Object.entries(error.response.data)) {
-              if (Array.isArray(messages)) {
-                errors.push(`${field}: ${messages.join(', ')}`)
-              } else {
-                errors.push(`${field}: ${messages}`)
-              }
+              if (Array.isArray(messages)) errors.push(`${field}: ${messages.join(', ')}`)
+              else errors.push(`${field}: ${messages}`)
             }
-            if (errors.length > 0) {
-              errorMessage += ':\n' + errors.join('\n')
-            }
-          } else {
-            errorMessage += ': ' + error.response.data
-          }
+            if (errors.length > 0) errorMessage += ':\n' + errors.join('\n')
+          } else errorMessage += ': ' + error.response.data
         }
-        
         this.showError(errorMessage)
       }
     },
@@ -1089,13 +1385,12 @@ export default {
         cancelText: 'Отмена',
         variant: 'danger'
       })
-      
+
       if (confirmed) {
         try {
           await projectManagementApi.deleteProject(this.project.id)
           this.closeConfirmDialog()
           this.showSuccess('Проект успешно удален!')
-          // Переходим к списку проектов
           this.$router.push('/crm/project-management/projects')
         } catch (error) {
           console.error('Ошибка удаления проекта:', error)
@@ -1113,7 +1408,7 @@ export default {
         cancelText: 'Отмена',
         variant: 'danger'
       })
-      
+
       if (confirmed) {
         try {
           await projectManagementApi.deleteTask(task.id)
@@ -1174,7 +1469,6 @@ export default {
 
     getPriorityText(priority) {
       if (!priority) return 'Не указан'
-      // Сначала ищем в приоритетах задач, потом в приоритетах проектов
       const taskPriorityObj = this.taskPriorities?.find(p => p.code === priority)
       const projectPriorityObj = this.projectPriorities?.find(p => p.code === priority)
       return taskPriorityObj?.name || projectPriorityObj?.name || priority
@@ -1196,18 +1490,12 @@ export default {
       return new Date(date).toISOString().slice(0, 16)
     },
 
-
-
     updateProjectProgress() {
       if (!this.project || !Array.isArray(this.tasks)) return
-      
-      // Фильтруем только валидные задачи
       const validTasks = this.tasks.filter(task => task && task.status)
       const totalTasks = validTasks.length
       const completedTasks = validTasks.filter(task => task.status === 'done').length
       const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
-      
-      // Обновляем локальные данные проекта
       this.project.task_count = totalTasks
       this.project.completed_task_count = completedTasks
       this.project.progress = progress
@@ -1239,24 +1527,17 @@ export default {
     },
 
     getBackRoute() {
-      // Проверяем query параметр from для определения откуда пришли
       const from = this.$route.query.from
-      if (from === 'management') {
-        return '/crm/project-management/management'
-      }
-      // По умолчанию возвращаемся в "Мои проекты"
+      if (from === 'management') return '/crm/project-management/management'
       return '/crm/project-management/my-projects'
     },
 
     getBackRouteTitle() {
       const from = this.$route.query.from
-      if (from === 'management') {
-        return 'Проекты и задачи'
-      }
+      if (from === 'management') return 'Проекты и задачи'
       return 'Мои проекты'
     },
 
-    // Методы для управления командой проекта
     openTeamModal() {
       this.selectedUserId = ''
       this.selectedRole = 'member'
@@ -1272,43 +1553,25 @@ export default {
 
       this.loadingTeamAction = true
       try {
-        const memberData = {
-          user_id: this.selectedUserId,
-          role: this.selectedRole
-        }
-
-        const response = await projectManagementApi.addProjectMember(this.project.id, memberData)
-        
-        // Обновляем только данные команды
+        const memberData = { user_id: this.selectedUserId, role: this.selectedRole }
+        await projectManagementApi.addProjectMember(this.project.id, memberData)
         await this.refreshTeamData()
-        
-        // Сбрасываем форму
         this.selectedUserId = ''
         this.selectedRole = 'member'
-        
         this.showSuccess('Участник добавлен в команду проекта!')
       } catch (error) {
         console.error('Ошибка добавления участника:', error)
-        
         let errorMessage = 'Ошибка добавления участника'
         if (error.response?.data) {
           if (typeof error.response.data === 'object') {
             const errors = []
             for (const [field, messages] of Object.entries(error.response.data)) {
-              if (Array.isArray(messages)) {
-                errors.push(`${field}: ${messages.join(', ')}`)
-              } else {
-                errors.push(`${field}: ${messages}`)
-              }
+              if (Array.isArray(messages)) errors.push(`${field}: ${messages.join(', ')}`)
+              else errors.push(`${field}: ${messages}`)
             }
-            if (errors.length > 0) {
-              errorMessage += ':\n' + errors.join('\n')
-            }
-          } else {
-            errorMessage += ': ' + error.response.data
-          }
+            if (errors.length > 0) errorMessage += ':\n' + errors.join('\n')
+          } else errorMessage += ': ' + error.response.data
         }
-        
         this.showError(errorMessage)
       } finally {
         this.loadingTeamAction = false
@@ -1338,10 +1601,7 @@ export default {
       try {
         await projectManagementApi.removeProjectMember(this.project.id, member.user.id)
         this.closeConfirmDialog()
-        
-        // Обновляем данные команды
         await this.refreshTeamData()
-        
         this.showSuccess('Участник исключен из команды проекта!')
       } catch (error) {
         console.error('Ошибка удаления участника:', error)
@@ -1351,67 +1611,78 @@ export default {
     },
 
     getRoleText(role) {
-      const roles = {
-        'member': 'Участник',
-        'lead': 'Ведущий',
-        'observer': 'Наблюдатель'
-      }
+      const roles = { 'member': 'Участник', 'lead': 'Ведущий', 'observer': 'Наблюдатель' }
       return roles[role] || role
     },
-
     getRoleClass(role) {
-      const classes = {
-        'member': 'member-role',
-        'lead': 'lead-role',
-        'observer': 'observer-role'
-      }
+      const classes = { 'member': 'member-role', 'lead': 'lead-role', 'observer': 'observer-role' }
       return classes[role] || 'member-role'
     },
-
     getRoleBadgeClass(role) {
-      const classes = {
-        'member': 'bg-secondary',
-        'lead': 'bg-warning',
-        'observer': 'bg-info'
-      }
+      const classes = { 'member': 'bg-secondary', 'lead': 'bg-warning', 'observer': 'bg-info' }
       return classes[role] || 'bg-secondary'
     },
 
     getUserDisplayName(user) {
       if (!user) return 'Неизвестный пользователь'
-      
-      if (user.full_name) {
-        return user.full_name
-      }
-      
-      if (user.first_name || user.last_name) {
-        return `${user.first_name || ''} ${user.last_name || ''}`.trim()
-      }
-      
+      if (user.full_name) return user.full_name
+      if (user.first_name || user.last_name) return `${user.first_name || ''} ${user.last_name || ''}`.trim()
       return user.username || user.email || 'Пользователь'
     },
 
-    getAvatarUrl(user) {
-      // Используем локальную утилиту для генерации аватаров
-      return getAvatarUrl(user, 40)
-    },
-
     async refreshTeamData() {
-      // Принудительное обновление только данных команды
       if (!this.project?.id) return
-      
       try {
         const response = await projectManagementApi.getProject(this.project.id)
-        
-        // Обновляем только поле memberships
-        if (this.project) {
-          this.project.memberships = response.data.memberships || []
-        }
+        if (this.project) this.project.memberships = response.data.memberships || []
       } catch (error) {
         console.error('Ошибка обновления команды:', error)
         this.showError('Ошибка обновления данных команды')
       }
-    }
+    },
+
+    async loadProjectFieldSettings() {
+      try {
+        this.loadingProjectFields = true
+        const { data } = await fieldsSettingsApi.getProjectFields()
+        const arr = Array.isArray(data) ? data : (data?.results || data?.fields || [])
+        this.projectFieldSettings = arr
+      } catch (e) {
+        console.error('Не удалось загрузить поля проекта', e)
+        this.projectFieldSettings = []
+      } finally {
+        this.loadingProjectFields = false
+      }
+    },
+
+    async loadTaskFieldSettings() {
+      try {
+        this.loadingTaskFields = true
+        const { data } = await fieldsSettingsApi.getTaskFields()
+        const arr = Array.isArray(data) ? data : (data?.results || data?.fields || [])
+        this.taskFieldSettings = arr
+      } catch (e) {
+        console.error('Не удалось загрузить поля задач', e)
+        this.taskFieldSettings = []
+      } finally {
+        this.loadingTaskFields = false
+      }
+    },
+
+    initDynamicFromSettings(settings, existing = {}) {
+      const out = {}
+      for (const f of settings) {
+        if (!f || !f.name) continue
+        let v = existing[f.name]
+        if (v === undefined) {
+          if (f.type === 'checkbox') v = false
+          else if (f.type === 'multiselect') v = []
+          else v = ''
+        }
+        out[f.name] = v
+      }
+      return out
+    },
   }
 }
 </script>
@@ -1435,11 +1706,11 @@ export default {
   padding: 1.5rem;
   border-radius: $radius-usual;
   box-shadow: $pm-card-shadow;
-  
+
   .header-content {
     flex: 1;
   }
-  
+
   .header-actions {
     display: flex;
     gap: 0.75rem;
@@ -1450,15 +1721,15 @@ export default {
 // Хлебные крошки
 .breadcrumb-nav {
   margin-bottom: 1rem;
-  
+
   .breadcrumb {
     background: transparent;
     padding: 0;
     margin: 0;
-    
+
     .breadcrumb-item {
       font-size: 0.875rem;
-      
+
       .breadcrumb-link {
         display: flex;
         align-items: center;
@@ -1466,12 +1737,12 @@ export default {
         color: var(--bs-secondary-color);
         text-decoration: none;
         transition: color 0.2s ease;
-        
+
         &:hover {
           color: var(--bs-primary);
         }
       }
-      
+
       &.active {
         color: var(--bs-heading-color);
         font-weight: 600;
@@ -1485,7 +1756,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 1rem;
-  
+
   .project-icon {
     width: 48px;
     height: 48px;
@@ -1495,7 +1766,7 @@ export default {
     justify-content: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   }
-  
+
   .project-title {
     h1 {
       font-size: 2rem;
@@ -1503,11 +1774,11 @@ export default {
       color: var(--bs-heading-color);
       margin: 0 0 0.5rem 0;
     }
-    
+
     .project-meta-badges {
       display: flex;
       gap: 0.5rem;
-      
+
       .badge {
         padding: 0.375rem 0.75rem;
         font-size: 0.75rem;
@@ -1528,7 +1799,7 @@ export default {
     font-weight: 600;
     border-radius: 8px;
     transition: all 0.2s ease;
-    
+
     &:hover {
       transform: translateY(-1px);
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
@@ -1547,12 +1818,12 @@ export default {
   background: white;
   border-radius: $radius-usual;
   box-shadow: $pm-card-shadow;
-  
+
   h3 {
     margin: 1rem 0 0.5rem 0;
     color: var(--bs-heading-color);
   }
-  
+
   p {
     color: var(--bs-secondary-color);
     margin-bottom: 1.5rem;
@@ -1587,16 +1858,16 @@ export default {
   .info-section {
     margin-bottom: 2rem;
   }
-  
+
   .info-grid {
     display: grid;
     grid-template-columns: 2fr 1fr 1fr;
     gap: 1.5rem;
-    
+
     @media (max-width: 1200px) {
       grid-template-columns: 1fr 1fr;
     }
-    
+
     @media (max-width: 768px) {
       grid-template-columns: 1fr;
     }
@@ -1610,11 +1881,11 @@ export default {
   box-shadow: $pm-card-shadow;
   padding: 1.5rem;
   transition: all 0.2s ease;
-  
+
   &:hover {
     box-shadow: $pm-card-hover-shadow;
   }
-  
+
   .card-header {
     display: flex;
     align-items: center;
@@ -1622,7 +1893,7 @@ export default {
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--bs-border-color);
-    
+
     h3 {
       font-size: 1.25rem;
       font-weight: 600;
@@ -1630,11 +1901,11 @@ export default {
       margin: 0;
     }
   }
-  
+
   .card-body {
     .description-section {
       margin-bottom: 1.5rem;
-      
+
       .description {
         color: var(--bs-secondary-color);
         line-height: 1.6;
@@ -1649,7 +1920,7 @@ export default {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
-  
+
   .meta-item {
     display: flex;
     align-items: center;
@@ -1657,15 +1928,15 @@ export default {
     padding: 0.75rem;
     background: var(--bs-gray-100);
     border-radius: 8px;
-    
+
     .meta-icon {
       color: var(--bs-secondary-color);
     }
-    
+
     .meta-content {
       display: flex;
       flex-direction: column;
-      
+
       .meta-label {
         font-size: 0.75rem;
         font-weight: 600;
@@ -1673,7 +1944,7 @@ export default {
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
-      
+
       .meta-value {
         font-weight: 600;
         color: var(--bs-heading-color);
@@ -1686,46 +1957,46 @@ export default {
 .stats-card {
   .progress-section {
     margin-bottom: 1.5rem;
-    
+
     .progress-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 0.75rem;
-      
+
       span {
         font-size: 0.875rem;
         color: var(--bs-secondary-color);
       }
-      
+
       .progress-value {
         font-weight: 600;
         color: var(--bs-primary);
       }
     }
-    
+
     .progress-bar-container {
       height: 8px;
       background: var(--bs-gray-200);
       border-radius: 4px;
       overflow: hidden;
-      
+
       .progress-bar {
         height: 100%;
         border-radius: 4px;
         transition: width 0.3s ease;
-        
+
         &.bg-success { background: var(--bs-success); }
         &.bg-warning { background: var(--bs-warning); }
         &.bg-danger { background: var(--bs-danger); }
       }
     }
   }
-  
+
   .stats-grid {
     display: grid;
     gap: 1rem;
-    
+
     .stat-item {
       display: flex;
       align-items: center;
@@ -1733,14 +2004,14 @@ export default {
       padding: 0.75rem;
       background: var(--bs-gray-100);
       border-radius: 8px;
-      
+
       .stat-icon {
         color: var(--bs-primary);
-        
+
         &.completed { color: var(--bs-success); }
         &.in-progress { color: var(--bs-warning); }
       }
-      
+
       .stat-content {
         .stat-value {
           font-size: 1.5rem;
@@ -1748,7 +2019,7 @@ export default {
           color: var(--bs-heading-color);
           line-height: 1;
         }
-        
+
         .stat-label {
           font-size: 0.75rem;
           color: var(--bs-secondary-color);
@@ -1764,17 +2035,17 @@ export default {
 .team-card {
   .card-header {
     justify-content: space-between;
-    
+
     .btn {
       margin-left: auto;
     }
   }
-  
+
   .team-members {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    
+
     .team-member {
       display: flex;
       align-items: center;
@@ -1783,7 +2054,7 @@ export default {
       background: var(--bs-gray-100);
       border-radius: 8px;
       position: relative;
-      
+
       .member-avatar {
         width: 40px;
         height: 40px;
@@ -1792,60 +2063,37 @@ export default {
         border: 2px solid white;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
-      
+
       .member-info {
         flex: 1;
-        
+
         .member-name {
           font-weight: 600;
           color: var(--bs-heading-color);
         }
-        
+
         .member-role {
           font-size: 0.75rem;
           text-transform: uppercase;
           letter-spacing: 0.5px;
-          
-          &.owner-role {
-            color: var(--bs-success);
-            font-weight: 600;
-          }
-          
-          &.manager-role {
-            color: var(--bs-primary);
-            font-weight: 600;
-          }
-          
-          &.lead-role {
-            color: var(--bs-warning);
-            font-weight: 600;
-          }
-          
-          &.member-role {
-            color: var(--bs-secondary);
-          }
-          
-          &.observer-role {
-            color: var(--bs-info);
-          }
+
+          &.owner-role { color: var(--bs-success); font-weight: 600; }
+          &.manager-role { color: var(--bs-primary); font-weight: 600; }
+          &.lead-role { color: var(--bs-warning); font-weight: 600; }
+          &.member-role { color: var(--bs-secondary); }
+          &.observer-role { color: var(--bs-info); }
         }
       }
-      
-      .member-actions {
-        display: flex;
-        gap: 0.25rem;
-      }
+
+      .member-actions { display: flex; gap: 0.25rem; }
     }
-    
+
     .empty-team {
       text-align: center;
       padding: 2rem;
-      
-      .empty-icon {
-        color: var(--bs-gray-400);
-        margin-bottom: 1rem;
-      }
-      
+
+      .empty-icon { color: var(--bs-gray-400); margin-bottom: 1rem; }
+
       p {
         color: var(--bs-secondary-color);
         margin-bottom: 1rem;
@@ -1860,7 +2108,7 @@ export default {
     .current-team {
       max-height: 300px;
       overflow-y: auto;
-      
+
       .team-member-modal {
         display: flex;
         align-items: center;
@@ -1869,57 +2117,40 @@ export default {
         background: var(--bs-gray-100);
         border-radius: 6px;
         margin-bottom: 0.5rem;
-        
+
         .member-avatar-small {
           width: 32px;
           height: 32px;
           border-radius: 50%;
           object-fit: cover;
         }
-        
+
         .member-info-modal {
           flex: 1;
-          
+
           .member-name {
             font-size: 0.875rem;
             font-weight: 600;
             color: var(--bs-heading-color);
           }
-          
+
           .member-role {
             font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.3px;
-            
-            &.owner-role {
-              color: var(--bs-success);
-            }
-            
-            &.manager-role {
-              color: var(--bs-primary);
-            }
-            
-            &.lead-role {
-              color: var(--bs-warning);
-            }
-            
-            &.member-role {
-              color: var(--bs-secondary);
-            }
-            
-            &.observer-role {
-              color: var(--bs-info);
-            }
+
+            &.owner-role { color: var(--bs-success); }
+            &.manager-role { color: var(--bs-primary); }
+            &.lead-role { color: var(--bs-warning); }
+            &.member-role { color: var(--bs-secondary); }
+            &.observer-role { color: var(--bs-info); }
           }
         }
       }
     }
-    
+
     .add-member-form {
-      .form-label {
-        font-weight: 600;
-        color: var(--bs-heading-color);
-      }
+      .form-label { font-weight: 600; color: var(--bs-heading-color); }
     }
   }
 }
@@ -1930,19 +2161,19 @@ export default {
   border-radius: $radius-usual;
   box-shadow: $pm-card-shadow;
   overflow: hidden;
-  
+
   .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 1.5rem;
     border-bottom: 1px solid var(--bs-border-color);
-    
+
     .section-title {
       display: flex;
       align-items: center;
       gap: 0.75rem;
-      
+
       h2 {
         font-size: 1.5rem;
         font-weight: 600;
@@ -1950,7 +2181,9 @@ export default {
         margin: 0;
       }
     }
-    
+
+    .section-actions { display: flex; gap: 0.75rem; }
+
     .btn {
       display: flex;
       align-items: center;
@@ -1959,36 +2192,27 @@ export default {
       font-weight: 600;
       border-radius: 8px;
       transition: all 0.2s ease;
-      
+
       &:hover {
         transform: translateY(-1px);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
       }
     }
   }
-  
+
   .tasks-content {
     padding: 1.5rem;
-    
+
     .empty-state {
       text-align: center;
       padding: 3rem 2rem;
-      
-      .empty-icon {
-        color: var(--bs-gray-400);
-        margin-bottom: 1rem;
-      }
-      
-      h3 {
-        color: var(--bs-heading-color);
-        margin-bottom: 0.5rem;
-      }
-      
-      p {
-        color: var(--bs-secondary-color);
-        margin-bottom: 1.5rem;
-      }
-      
+
+      .empty-icon { color: var(--bs-gray-400); margin-bottom: 1rem; }
+
+      h3 { color: var(--bs-heading-color); margin-bottom: 0.5rem; }
+
+      p { color: var(--bs-secondary-color); margin-bottom: 1.5rem; }
+
       .btn {
         display: inline-flex;
         align-items: center;
@@ -1998,6 +2222,8 @@ export default {
         border-radius: 8px;
       }
     }
+
+    .task-tree-container { height: 400px; }
   }
 }
 
@@ -2006,10 +2232,10 @@ export default {
   .tasks-table {
     width: 100%;
     border-collapse: collapse;
-    
+
     thead {
       background: var(--bs-gray-100);
-      
+
       th {
         padding: 1rem;
         text-align: left;
@@ -2021,20 +2247,15 @@ export default {
         letter-spacing: 0.5px;
       }
     }
-    
+
     tbody {
       tr {
         border-bottom: 1px solid var(--bs-border-color);
         transition: background-color 0.2s ease;
-        
-        &:hover {
-          background: var(--bs-gray-50);
-        }
-        
-        td {
-          padding: 1rem;
-          vertical-align: top;
-        }
+
+        &:hover { background: var(--bs-gray-50); }
+
+        td { padding: 1rem; vertical-align: top; }
       }
     }
   }
@@ -2049,7 +2270,7 @@ export default {
       color: var(--bs-heading-color);
       margin: 0 0 0.5rem 0;
     }
-    
+
     .task-description {
       font-size: 0.875rem;
       color: var(--bs-secondary-color);
@@ -2064,20 +2285,20 @@ export default {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    
+
     .assignee-avatar {
       width: 32px;
       height: 32px;
       border-radius: 50%;
       object-fit: cover;
     }
-    
+
     .assignee-name {
       font-weight: 600;
       color: var(--bs-heading-color);
     }
   }
-  
+
   .no-assignee {
     color: var(--bs-secondary-color);
     font-style: italic;
@@ -2100,7 +2321,7 @@ export default {
     align-items: center;
     gap: 0.25rem;
     font-size: 0.875rem;
-    
+
     &.text-danger { color: var(--bs-danger); }
     &.text-warning { color: var(--bs-warning); }
     &.text-primary { color: var(--bs-primary); }
@@ -2109,31 +2330,25 @@ export default {
 
 // Адаптивность
 @media (max-width: 768px) {
-  .project-detail-page {
-    padding: 1rem;
-  }
-  
+  .project-detail-page { padding: 1rem; }
+
   .page-header {
     flex-direction: column;
     gap: 1rem;
-    
+
     .header-actions {
       margin-left: 0;
       width: 100%;
       justify-content: flex-end;
     }
   }
-  
+
   .project-title-section {
-    .project-title h1 {
-      font-size: 1.5rem;
-    }
+    .project-title h1 { font-size: 1.5rem; }
   }
-  
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-  
+
+  .info-grid { grid-template-columns: 1fr; }
+
   .tasks-section {
     .section-header {
       flex-direction: column;
@@ -2141,13 +2356,11 @@ export default {
       align-items: flex-start;
     }
   }
-  
+
   .tasks-table-container {
     overflow-x: auto;
-    
-    .tasks-table {
-      min-width: 600px;
-    }
+
+    .tasks-table { min-width: 600px; }
   }
 }
 
@@ -2157,7 +2370,7 @@ export default {
     display: flex;
     gap: 0.5rem;
     justify-content: center;
-    
+
     .btn-edit-icon,
     .btn-delete-icon {
       width: 32px;
@@ -2171,27 +2384,27 @@ export default {
       background: transparent;
       border: 1px solid;
       cursor: pointer;
-      
+
       &:hover {
         transform: translateY(-1px);
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
       }
     }
-    
+
     .btn-edit-icon {
       border-color: var(--bs-primary);
       color: var(--bs-primary);
-      
+
       &:hover {
         background-color: var(--bs-primary);
         color: white;
       }
     }
-    
+
     .btn-delete-icon {
       border-color: var(--bs-danger);
       color: var(--bs-danger);
-      
+
       &:hover {
         background-color: var(--bs-danger);
         color: white;
@@ -2199,4 +2412,20 @@ export default {
     }
   }
 }
-</style> 
+
+/* ===== Стили чата комментариев ===== */
+.chat-wrap { min-height: 280px; max-height: 60vh; overflow: auto; }
+.chat-thread { display: flex; flex-direction: column; gap: 12px; }
+.chat-msg { display: flex; align-items: flex-start; gap: 10px; }
+.chat-msg.mine { flex-direction: row-reverse; }
+.chat-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.chat-bubble {
+  max-width: 75%;
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+.chat-msg.mine .chat-bubble { background: var(--bs-primary-bg-subtle); }
+.chat-meta { display: flex; align-items: baseline; gap: 6px; }
+.chat-content { white-space: pre-wrap; word-break: break-word; margin-top: 4px; }
+.chat-actions { margin-top: 6px; }
+</style>

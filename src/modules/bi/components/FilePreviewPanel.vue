@@ -1,13 +1,13 @@
 <template>
   <div v-if="file">
     <!-- CSV preview -->
-    <CsvPreview v-if="isCsvFile(file)" :file="file" :isLoading="isLoading" :key="`csv-${file.id || file.temp_path || file.name}`" />
+    <CsvPreview v-if="isCsvFile(file)" :file="file" :key="`csv-${file.id || file.temp_path || file.name}`" />
 
     <!-- XLSX preview -->
-    <XlsxPreview v-else-if="isXlsxFile(file)" :file="file" :isLoading="isLoading" :key="`xlsx-${file.id || file.temp_path || file.name}`"/>
+    <XlsxPreview v-else-if="isXlsxFile(file)" :file="file" :key="`xlsx-${file.id || file.temp_path || file.name}`"/>
 
     <!-- TXT preview -->
-    <TxtPreview v-else-if="isTxtFile(file)" :file="file" :isLoading="isLoading" :key="`txt-${file.id || file.temp_path || file.name}`" />
+    <TxtPreview v-else-if="isTxtFile(file)" :file="file" :key="`txt-${file.id || file.temp_path || file.name}`" />
 
     <div v-else class="text-muted p-4">Формат файла не поддерживается для предпросмотра.</div>
   </div>
@@ -19,8 +19,7 @@ import XlsxPreview from './FilePreview/XlsxPreview.vue'
 import TxtPreview from './FilePreview/TxtPreview.vue'
 
 const props = defineProps({
-  file: Object,
-  isLoading: Boolean
+  file: Object
 })
 
 function isXlsxFile(file) {

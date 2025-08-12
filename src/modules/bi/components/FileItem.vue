@@ -1,8 +1,7 @@
 <template>
-  <div class="file-item" :class="{ active: isActive, 'has-issue': hasFileIssue }" @click="emitSelect">
+  <div class="file-item" :class="{ active: isActive }" @click="emitSelect">
     <div class="file-content">
-      <TriangleAlert v-if="hasFileIssue" class="file-icon alert-icon" @mouseenter="onIconHover($event, tooltipLabel)" @mouseleave="onIconLeave"/>
-      <img v-else :src="iconPath" class="file-icon" @mouseenter="onIconHover($event, tooltipLabel)" @mouseleave="onIconLeave"/>
+      <img :src="iconPath" class="file-icon" @mouseenter="onIconHover($event, tooltipLabel)" @mouseleave="onIconLeave"/>
       <div class="file-name-desc">
         <span class="file-name" :title="file.name">{{ file.name }}</span>
         <span v-if="file.pendingSheets && !file.processedSheets" class="file-subtext">Выбрать листы</span>
@@ -30,7 +29,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
-import { MoreHorizontal, TriangleAlert } from 'lucide-vue-next'
+import { MoreHorizontal } from 'lucide-vue-next'
 
 const props = defineProps({
   file: Object,
@@ -43,24 +42,7 @@ const showMenu = ref(false)
 const menuButton = ref(null)
 const menuDropdown = ref(null)
 
-// Определяем, есть ли проблемы с файлом
-const hasFileIssue = computed(() => {
-  return props.file.missing === true || 
-         props.file.exists === false || 
-         props.file.file_not_found === true ||
-         props.file.status === 'missing' ||
-         props.file.status === 'not_found' ||
-         !props.file.file_path ||
-         props.file.error
-})
-
 const tooltipLabel = computed(() => {
-  // Если есть проблема с файлом, показываем соответствующий текст
-  if (hasFileIssue.value) {
-    return 'Файл не найден'
-  }
-  
-  // Для обычных файлов показываем формат
   let ext = props.file.file_type?.toLowerCase()
   if (!ext && props.file.name) {
     const m = props.file.name.match(/\.(\w+)$/)
@@ -73,8 +55,7 @@ const tooltipLabel = computed(() => {
 })
 
 function onIconHover(event) {
-  const tooltipClass = hasFileIssue.value ? 'error-tooltip' : ''
-  emit('tooltip-show', event, tooltipLabel.value, tooltipClass)
+  emit('tooltip-show', event, tooltipLabel.value)
 }
 function onIconLeave() {
   emit('tooltip-hide')
@@ -139,23 +120,15 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   padding: 8px 12px;
   border-radius: 6px;
   min-height: 40px;
-  transition: background 0.2s ease, border 0.2s ease;
+  transition: background 0.2s ease;
   cursor: pointer;
   position: relative;
-  border: 1px solid transparent;
 }
 .file-item:hover {
   background-color: var(--color-hover-background);
 }
 .file-item.active {
   background-color: var(--color-hover-background);
-}
-.file-item.has-issue {
-  border-color: var(--color-accent);
-  background-color: rgba(var(--color-accent-rgb, 255, 82, 82), 0.05);
-}
-.file-item.has-issue:hover {
-  background-color: rgba(var(--color-accent-rgb, 255, 82, 82), 0.1);
 }
 
 .file-content {
@@ -170,16 +143,6 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   width: 16px;
   height: 16px;
   flex-shrink: 0;
-}
-
-.alert-icon {
-  color: var(--color-accent);
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.alert-icon:hover {
-  color: #ff5252;
 }
 
 .file-name-desc {

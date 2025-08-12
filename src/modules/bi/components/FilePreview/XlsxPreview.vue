@@ -14,12 +14,16 @@
       </div>
     </div>
 
-    <div v-if="errorState" class="error-message">
+    <div v-if="isLoading" class="spinner-wrapper">
+      <div class="spinner"></div>
+    </div>
+
+    <div v-else-if="errorState" class="error-message">
       <h2>Ошибка</h2>
       <p>{{ errorState }}</p>
     </div>
 
-    <div class="table-scroll-wrapper" v-if="columns.length && !errorState">
+    <div class="table-scroll-wrapper" v-else-if="columns.length">
       <div class="table-scroll-inner">
         <table class="xlsx-table">
           <thead>
@@ -50,14 +54,12 @@ import { apiClient } from '@/js/api/manager'
 import { endpoints } from '@/js/api/endpoints'
 import ExcelJS from 'exceljs'
 
-const props = defineProps({ 
-  file: Object,
-  isLoading: Boolean
-})
+const props = defineProps({ file: Object })
 
 const hasHeader = ref(true)
 const rawData = ref([])
 const searchQuery = ref('')
+const isLoading = ref(false)
 const errorState = ref(null)
 const selectedRow = ref(null)
 
@@ -155,6 +157,7 @@ function detectTypes() {
 async function fetchData() {
   if (!props.file) return
 
+  isLoading.value = true
   errorState.value = null
 
   try {
@@ -196,6 +199,8 @@ async function fetchData() {
     console.error('Ошибка предпросмотра:', e)
     errorState.value = e.message
     rawData.value = []
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -236,6 +241,28 @@ onMounted(fetchData)
 
 .toggle-group button.active {
   background: var(--color-accent);
+}
+
+.spinner-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid var(--color-border);
+  border-top: 5px solid #10b981;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .error-message {

@@ -36,12 +36,8 @@
           @click="activeTab = 'sources'">Источники</button>
         <button class="tab-button" :class="{ active: activeTab === 'fields' }"
           @click="activeTab = 'fields'">Поля</button>
-        <button class="tab-button" :class="{ active: activeTab === 'params' }"
+        <button class="tab-button" hidden :class="{ active: activeTab === 'params' }"
           @click="activeTab = 'params'">Параметры</button>
-        <button class="tab-button" :class="{ active: activeTab === 'filters' }"
-          @click="activeTab = 'filters'">Фильтрация</button>
-        <button class="tab-button" :class="{ active: activeTab === 'analysis' }"
-          @click="activeTab = 'analysis'">Анализ</button>
       </div>
       <div class="button-preview">
         <button v-if="activeTab === 'fields'" class="btn btn-secondary" style="display: flex; gap: 5px;"

@@ -9,17 +9,10 @@
                 </div>
                 <div class="skeleton-date"></div>
             </li>
-            <li v-for="item in filteredUsers" :key="item.id" class="connection-item" :class="{ selected: isSelected(item), problematic: isProblematicConnection(item) }" v-show="!isLoading" @click="handleConnectionClick(item)">
+            <li v-for="item in filteredUsers" :key="item.id" class="connection-item" :class="{ selected: isSelected(item) }" v-show="!isLoading" @click="emit('select', item)">
                 <div class="connection-left">
                     <img :src="getIconComponent(item)?.src" class="icon" @mouseenter="onIconHover($event, getIconComponent(item)?.tooltip)" @mouseleave="hideTooltip"/>
                     <span class="connection-name">{{ item.name }}</span>
-                    <TriangleAlert 
-                        v-if="shouldShowFileWarning(item)" 
-                        class="alert-icon" 
-                        :size="16" 
-                        @mouseenter="onIconHover($event, getFileWarningTooltip(item), 'error-tooltip')"
-                        @mouseleave="hideTooltip"
-                    />
                 </div>
                 <div class="connection-date">
                     {{ new Date(item.created_at).toLocaleDateString() }}
@@ -28,18 +21,17 @@
             <li v-if="!isLoading && filteredUsers.length === 0" class="no-data">Нет данных</li>
         </ul>
     </div>
-    <div v-if="showTooltip" class="tooltip-fixed" :class="tooltipClass" :style="tooltipStyle">
+    <div v-if="showTooltip" class="tooltip-fixed" :style="tooltipStyle">
         {{ tooltipText }}
     </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import ClickHouseIcon from '@/assets/bi/icons/clickhouse.svg'
 import PostgresIcon from '@/assets/bi/icons/postgres.svg'
 import MssqlIcon from '@/assets/bi/icons/mssql.svg'
 import FileIcon from '@/assets/bi/icons/folder_windows_style.svg'
-import { TriangleAlert } from 'lucide-vue-next'
 import { apiClient } from '@/js/api/manager.js'
 
 const emit = defineEmits(['select'])
@@ -58,24 +50,18 @@ const isLoading = ref(true)
 
 const tooltipText = ref('')
 const tooltipStyle = ref({ top: '0px', left: '0px' })
-const tooltipClass = ref('')
 const showTooltip = ref(false)
-
-const connectionFilesStatus = ref(new Map())
 
 onMounted(async () => {
     isLoading.value = true
     const res = await apiClient.get('bi_analysis/bi_connections/')
     if (res.success) {
         users.value = res.data
-        await loadAllConnectionFilesStatus()
     } else {
         console.error('Ошибка при получении подключений:', res.errors)
     }
     isLoading.value = false
 })
-
-watch(() => users.value, loadAllConnectionFilesStatus, { immediate: true })
 
 const filteredUsers = computed(() =>
     users.value.filter((u) =>
@@ -91,13 +77,11 @@ function getIconComponent(row) {
   if (type.includes('file') || type.includes('файл')) return { src: FileIcon, tooltip: 'Файлы' }
   return null
 }
-
-function onIconHover(event, text, cssClass = '') {
+function onIconHover(event, text) {
     const target = event?.target
     if (!target || !document.body.contains(target)) return
 
     tooltipText.value = text
-    tooltipClass.value = cssClass
     showTooltip.value = true
 
     const rect = target.getBoundingClientRect()
@@ -109,108 +93,6 @@ function onIconHover(event, text, cssClass = '') {
 
 function hideTooltip() {
     showTooltip.value = false
-    tooltipClass.value = ''
-}
-
-function isProblematicConnection(row) {
-    if (!shouldShowFileWarning(row)) return false
-    
-    const filesStatus = connectionFilesStatus.value.get(row.id)
-    return filesStatus && (filesStatus.hasMissingFiles || filesStatus.hasProblematicFiles)
-}
-
-function handleConnectionClick(item) {
-    if (isProblematicConnection(item)) {
-        return
-    }
-    
-    emit('select', item)
-}
-
-function shouldShowFileWarning(row) {
-    const type = (row.connector_type_display || row.connector_type || '').toLowerCase().trim()
-    
-    const isFileConnection = type === 'file' || 
-                             type === 'files' || 
-                             type === 'файл' || 
-                             type === 'файлы' ||
-                             type.includes('file') || 
-                             type.includes('файл')
-    
-    if (!isFileConnection) return false
-    
-    const filesStatus = connectionFilesStatus.value.get(row.id)
-    
-    if (!filesStatus) return false
-    
-    return filesStatus.hasMissingFiles || filesStatus.hasProblematicFiles
-}
-
-function getFileWarningTooltip(row) {
-    const filesStatus = connectionFilesStatus.value.get(row.id)
-    
-    if (!filesStatus) return 'В подключении отсутствуют файлы'
-    
-    if (filesStatus.hasProblematicFiles) {
-        return 'Возникла проблема с одним из файлов в подключении'
-    }
-    
-    if (filesStatus.hasMissingFiles) {
-        return 'В подключении отсутствуют файлы'
-    }
-    
-    return 'В подключении отсутствуют файлы'
-}
-
-async function loadConnectionFilesStatus(connectionId) {
-    try {
-        const res = await apiClient.get(`bi_analysis/bi_datasets/connection/${connectionId}/files/`)
-        
-        if (res.success && res.data) {
-            const files = Array.isArray(res.data) ? res.data : []
-            
-            const hasMissingFiles = files.length === 0
-            
-            const hasProblematicFiles = files.some(file => {
-                return file.missing === true || 
-                       file.exists === false || 
-                       file.file_not_found === true ||
-                       file.status === 'missing' ||
-                       file.status === 'not_found' ||
-                       file.status === 'error' ||
-                       !file.file_path ||
-                       file.error
-            })
-            
-            connectionFilesStatus.value.set(connectionId, {
-                hasMissingFiles,
-                hasProblematicFiles,
-                filesCount: files.length
-            })
-        }
-    } catch (error) {
-        console.warn(`Не удалось загрузить статус файлов для подключения ${connectionId}:`, error)
-    }
-}
-
-async function loadAllConnectionFilesStatus() {
-    if (!users.value || users.value.length === 0) return
-    
-    const fileConnections = users.value.filter(row => {
-        const type = (row.connector_type_display || row.connector_type || '').toLowerCase().trim()
-        return type === 'file' || 
-               type === 'files' || 
-               type === 'файл' || 
-               type === 'файлы' ||
-               type.includes('file') || 
-               type.includes('файл')
-    })
-    
-    const promises = fileConnections.map(connection => 
-        loadConnectionFilesStatus(connection.id)
-    )
-    
-    await Promise.allSettled(promises)
 }
 </script>
 
@@ -234,15 +116,6 @@ async function loadAllConnectionFilesStatus() {
 
     &:hover {
         background-color: var(--color-hover-background);
-    }
-    
-    &.problematic {
-        opacity: 0.6;
-        cursor: not-allowed;
-        
-        &:hover {
-            background-color: transparent;
-        }
     }
 }
 
@@ -270,16 +143,6 @@ async function loadAllConnectionFilesStatus() {
 .icon {
     width: 18px;
     height: 18px;
-}
-
-.alert-icon {
-    color: var(--color-accent);
-    cursor: pointer;
-    transition: color 0.2s ease;
-}
-
-.alert-icon:hover {
-    color: #ff5252;
 }
 
 .no-data {
@@ -339,9 +202,5 @@ async function loadAllConnectionFilesStatus() {
   z-index: 9999;
   pointer-events: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  
-  &.error-tooltip {
-    border: 1px solid var(--color-accent);
-  }
 }
 </style>

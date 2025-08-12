@@ -25,7 +25,7 @@ class ApiClient {
                 if (error.response?.status === 401) {
                     // Очищаем токены и данные пользователя
                     this.logout();
-                    
+
                     // Перенаправляем на стартовую страницу
                     if (typeof window !== 'undefined' && window.location) {
                         // Проверяем, не находимся ли мы уже на стартовой странице
@@ -34,7 +34,7 @@ class ApiClient {
                         }
                     }
                 }
-                
+
                 // Возвращаем ошибку для дальнейшей обработки
                 return Promise.reject(error);
             }
@@ -175,7 +175,7 @@ class ApiClient {
     // Метод для скачивания файлов (бинарные данные)
     async downloadFile(endpoint, params = {}, needToken = true) {
         try {
-            const config = { 
+            const config = {
                 params,
                 responseType: 'blob' // Важно для бинарных данных
             };
@@ -183,7 +183,7 @@ class ApiClient {
                 this._addAuthToken(config);
             }
             const response = await this.client.get(endpoint, config);
-            
+
             // Для бинарных данных возвращаем специальный формат
             return {
                 success: true,
@@ -260,8 +260,6 @@ class ApiClient {
         const status = error.response?.status;
         const statusText = error.response?.statusText;
 
-        console.error(`API Error [${status || 'undefined'}${statusText ? ' ' + statusText : ''}]:`, errorMessage);
-
         return {
             success: false,
             message: errorMessage,
@@ -272,4 +270,4 @@ class ApiClient {
 }
 
 // Создать и экспортировать синглтон-объект
-export const apiClient = new ApiClient(); 
+export const apiClient = new ApiClient();

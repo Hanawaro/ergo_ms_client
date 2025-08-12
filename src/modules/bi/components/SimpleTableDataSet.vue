@@ -3,19 +3,11 @@
     <table class="custom-table">
       <thead class="transparent-header">
         <tr>
-          <th v-for="col in props.cols" :key="col.key">
-            {{ col.label }}
-            <span v-if="col.key === 'name'" class="items-count">
-              ({{ props.users.length }})
-              <span v-if="favoritesInCurrentList > 0" class="favorites-count">
-                • {{ favoritesInCurrentList }} в избранном
-              </span>
-            </span>
-          </th>
+          <th v-for="col in props.cols" :key="col.key">{{ col.label }}</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="row in sortedUsers" :key="row.id" class="table-row" :class="{ favorite: isFavorite(row.id) }" @mouseenter="hoveredRow = row.id"
+        <tr v-for="row in props.users" :key="row.id" class="table-row" @mouseenter="hoveredRow = row.id"
           @mouseleave="hoveredRow = null" @click="handleRowClick(row)">
           <td v-for="col in props.cols" :key="col.key" :style="{ position: 'relative', overflow: 'hidden' }"
             :class="{ 'td-actions': col.key === 'actions' }">
@@ -32,15 +24,10 @@
               <template v-else>
                 <Table class="icon" />
               </template>
+              <template v-else>
+                <Table class="icon" />
+              </template>
               <span class="dataset-name">{{ getValue(row, col.key) ?? '—' }}</span>
-              <!-- Предупреждение для подключений с отсутствующими или проблемными файлами -->
-              <TriangleAlert 
-                v-if="shouldShowFileWarning(row)" 
-                class="alert-icon" 
-                :size="16" 
-                @mouseenter="onIconHover($event, getFileWarningTooltip(row), 'error-tooltip')"
-                @mouseleave="hideTooltip"
-              />
             </template>
 
             <!-- Дата -->
@@ -53,13 +40,13 @@
 
             <!-- Действия -->
             <template v-else-if="col.key === 'actions'">
-              <div v-if="hasBeenOpened" class="actions-cell" :class="{ visible: hoveredRow === row.id || isFavorite(row.id) }">
+              <div class="actions-cell" :class="{ visible: hoveredRow === row.id || isFavorite(row.id) }">
                 <div class="actions-inner">
                   <button class="action-btn star" :class="{ active: isFavorite(row.id) }"
                     @click.stop="toggleFavorite(row.id)" title="Избранное">
                     <Star class="icon-inline" />
                   </button>
-                  <button class="action-btn more" :class="{ visible: hoveredRow === row.id }" @click="onMoreClick($event, row.id)" title="Еще">
+                  <button class="action-btn more" @click="onMoreClick($event, row.id)" title="Еще">
                     <MoreHorizontal class="icon-inline" />
                   </button>
                 </div>
@@ -80,11 +67,10 @@
     </table>
 
     <!-- Обычный тултип -->
-    <div v-if="showTooltip" class="tooltip-fixed" :class="tooltipClass" :style="tooltipStyle">{{ tooltipText }}</div>
+    <div v-if="showTooltip" class="tooltip-fixed" :style="tooltipStyle">{{ tooltipText }}</div>
 
     <!-- Меню "Еще" -->
     <div v-if="showMenu" class="menu-dropdown" :style="menuPosition" @mouseleave="closeMenu">
-
       <div class="menu-item" @click="openRename(getRowById(menuRowId))">
         <CaseSensitive :size="18" :stroke-width="2" />Переименовать
       </div>
@@ -142,8 +128,8 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, computed } from 'vue'
-import { Star, MoreHorizontal, Trash2, CaseSensitive, Link, ChartPie, Database, TriangleAlert, Table } from 'lucide-vue-next'
+import { ref, watch, onMounted } from 'vue'
+import { Table, Star, MoreHorizontal, Trash2, CaseSensitive, Link, ChartPie, Database } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { apiClient } from '@/js/api/manager.js'
 import ClickHouseIcon from '@/assets/bi/icons/clickhouse.svg'
@@ -158,36 +144,8 @@ const props = defineProps({
   currentPage: String
 })
 
-// Флаг для отслеживания, был ли уже открыт сайдбар BI
-const hasBeenOpened = ref(false)
-
 const hoveredRow = ref(null)
 const favorites = ref(new Set())
-
-const sortedUsers = computed(() => {
-  if (!props.users) return []
-  
-  return [...props.users].sort((a, b) => {
-    const aIsFavorite = isFavorite(a.id)
-    const bIsFavorite = isFavorite(b.id)
-    
-    if (aIsFavorite && !bIsFavorite) return -1
-    if (!aIsFavorite && bIsFavorite) return 1
-    
-    if (aIsFavorite === bIsFavorite) {
-      const aDate = new Date(a.created_at || 0)
-      const bDate = new Date(b.created_at || 0)
-      return bDate - aDate
-    }
-    return 0
-  })
-})
-
-const favoritesInCurrentList = computed(() => {
-  if (!props.users) return 0
-  const count = props.users.filter(user => isFavorite(user.id)).length
-  return count
-})
 
 const showDeleteDialog = ref(false)
 const rowToDelete = ref(null)
@@ -209,8 +167,6 @@ let fadeRaf = null
 
 const router = useRouter()
 
-const connectionFilesStatus = ref(new Map())
-
 function handleRowClick(row) {
   if (props.currentPage === 'datasets') {
     goToDataset(row)
@@ -225,13 +181,7 @@ function goToConnection(row) {
   if (!row || !row.id) return
 
   const type = (row.connector_type_display || row.connector_type || '').toLowerCase().trim()
-  
-  const isFileConnection = type === 'file' || 
-                           type === 'files' || 
-                           type === 'файл' || 
-                           type === 'файлы' ||
-                           type.includes('file') || 
-                           type.includes('файл')
+  const isFileConnection = type === 'file' || type === 'files' || type.includes('файл')
 
   if (isFileConnection) {
     router.push(`/bi/connections/${row.id}/files/`)
@@ -250,11 +200,9 @@ function goToChart(row) {
   router.push(`/bi/chart/${row.id}/`)
 }
 
+// localStorage избранное
 function loadFavorites() {
-  favorites.value.clear()
-  
-  const key = `favorite${props.currentPage.charAt(0).toUpperCase() + props.currentPage.slice(1)}`
-  const raw = localStorage.getItem(key)
+  const raw = localStorage.getItem('favoriteDatasets')
   if (raw) {
     try {
       favorites.value = new Set(JSON.parse(raw))
@@ -265,17 +213,12 @@ function loadFavorites() {
 }
 
 function saveFavorites() {
-  const key = `favorite${props.currentPage.charAt(0).toUpperCase() + props.currentPage.slice(1)}`
-  localStorage.setItem(key, JSON.stringify([...favorites.value]))
+  localStorage.setItem('favoriteDatasets', JSON.stringify([...favorites.value]))
 }
 
 function toggleFavorite(id) {
-  if (favorites.value.has(id)) {
-    favorites.value.delete(id)
-  } else {
-    favorites.value.add(id)
-  }
-  saveFavorites()
+  if (favorites.value.has(id)) favorites.value.delete(id)
+  else favorites.value.add(id)
 }
 
 function isFavorite(id) {
@@ -283,31 +226,21 @@ function isFavorite(id) {
 }
 
 onMounted(loadFavorites)
-watch(() => props.currentPage, loadFavorites, { immediate: true })
-
-// Отслеживаем первое открытие сайдбара BI
-watch(() => props.isDatasetSidebarOpen, (newValue) => {
-  if (newValue && !hasBeenOpened.value) {
-    hasBeenOpened.value = true
-  }
-}, { immediate: true })
-
-watch(() => props.users, loadAllConnectionFilesStatus, { immediate: true })
+watch(favorites, saveFavorites, { deep: true })
 
 function getValue(row, key) {
   return key.split('.').reduce((acc, part) => acc?.[part], row)
 }
 
+// Tooltip
 const tooltipText = ref('')
 const tooltipStyle = ref({ top: '0px', left: '0px' })
-const tooltipClass = ref('')
 const showTooltip = ref(false)
 
 const emit = defineEmits(['delete-row'])
 
-function onIconHover(event, text, cssClass = '') {
+function onIconHover(event, text) {
   tooltipText.value = text
-  tooltipClass.value = cssClass
   showTooltip.value = true
   const rect = event.target.getBoundingClientRect()
   tooltipStyle.value = {
@@ -318,7 +251,6 @@ function onIconHover(event, text, cssClass = '') {
 
 function hideTooltip() {
   showTooltip.value = false
-  tooltipClass.value = ''
 }
 
 function getIconComponent(row) {
@@ -331,14 +263,11 @@ function getIconComponent(row) {
     return { src: Database, tooltip: 'Датасет' }
   }
 
+  // Остальные типы
   if (type.includes('clickhouse')) return { src: ClickHouseIcon, tooltip: 'ClickHouse' }
   if (type.includes('postgres')) return { src: PostgresIcon, tooltip: 'PostgreSQL' }
   if (type.includes('sql server') || type.includes('mssql')) return { src: MssqlIcon, tooltip: 'Microsoft SQL Server' }
-  
-  if (type === 'file' || type === 'files' || type === 'файл' || type === 'файлы' ||
-      type.includes('file') || type.includes('файл')) {
-    return { src: FileIcon, tooltip: 'Загруженные файлы' }
-  }
+  if (type.includes('file') || type.includes('files') || type.includes('файл')) return { src: FileIcon, tooltip: 'Загруженные файлы' }
 
   return null
 }
@@ -516,96 +445,6 @@ async function copyLink(row) {
   }
   closeMenu()
 }
-
-function shouldShowFileWarning(row) {
-  if (props.currentPage !== 'connections') return false
-  
-  const type = (row.connector_type_display || row.connector_type || '').toLowerCase().trim()
-  
-  const isFileConnection = type === 'file' || 
-                           type === 'files' || 
-                           type === 'файл' || 
-                           type === 'файлы' ||
-                           type.includes('file') || 
-                           type.includes('файл')
-  
-  if (!isFileConnection) return false
-  
-  const filesStatus = connectionFilesStatus.value.get(row.id)
-  
-  if (!filesStatus) return false
-  
-  return filesStatus.hasMissingFiles || filesStatus.hasProblematicFiles
-}
-
-function getFileWarningTooltip(row) {
-  const filesStatus = connectionFilesStatus.value.get(row.id)
-  
-  if (!filesStatus) return 'В подключении отсутствуют файлы'
-  
-  if (filesStatus.hasProblematicFiles) {
-    return 'Возникла проблема с одним из файлов в подключении'
-  }
-  
-  if (filesStatus.hasMissingFiles) {
-    return 'В подключении отсутствуют файлы'
-  }
-  
-  return 'В подключении отсутствуют файлы'
-}
-
-async function loadConnectionFilesStatus(connectionId) {
-  try {
-    const res = await apiClient.get(`bi_analysis/bi_datasets/connection/${connectionId}/files/`)
-    
-    if (res.success && res.data) {
-      const files = Array.isArray(res.data) ? res.data : []
-      
-      const hasMissingFiles = files.length === 0
-      
-      const hasProblematicFiles = files.some(file => {
-        return file.missing === true || 
-               file.exists === false || 
-               file.file_not_found === true ||
-               file.status === 'missing' ||
-               file.status === 'not_found' ||
-               file.status === 'error' ||
-               !file.file_path ||
-               file.error
-      })
-      
-      connectionFilesStatus.value.set(connectionId, {
-        hasMissingFiles,
-        hasProblematicFiles,
-        filesCount: files.length
-      })
-    }
-  } catch (error) {
-    console.warn(`Не удалось загрузить статус файлов для подключения ${connectionId}:`, error)
-  }
-}
-
-async function loadAllConnectionFilesStatus() {
-  if (props.currentPage !== 'connections') return
-  
-  const fileConnections = props.users.filter(row => {
-    const type = (row.connector_type_display || row.connector_type || '').toLowerCase().trim()
-    return type === 'file' || 
-           type === 'files' || 
-           type === 'файл' || 
-           type === 'файлы' ||
-           type.includes('file') || 
-           type.includes('файл')
-  })
-  
-  const promises = fileConnections.map(connection => 
-    loadConnectionFilesStatus(connection.id)
-  )
-  
-  await Promise.allSettled(promises)
-}
-
-
 </script>
 
 <style scoped lang="scss">
@@ -617,15 +456,11 @@ async function loadAllConnectionFilesStatus() {
   color: var(--color-primary-text);
 }
 
-
-
 .custom-table {
   width: 100%;
   border-collapse: collapse;
   border-radius: 12px;
 }
-
-
 
 .transparent-header th {
   background-color: transparent;
@@ -640,42 +475,9 @@ async function loadAllConnectionFilesStatus() {
   white-space: nowrap;
 }
 
-.table-row {
-  transition: all 0.3s ease;
-}
-
 .table-row:hover {
   background-color: var(--color-hover-background);
   cursor: pointer;
-}
-
-.table-row.favorite {
-  background-color: rgba(250, 204, 21, 0.05);
-  border-left: 3px solid #facc15;
-}
-
-.table-row.favorite:hover {
-  background-color: rgba(250, 204, 21, 0.1);
-}
-
-.table-row.favorite + .table-row:not(.favorite) {
-  border-top: 2px solid rgba(250, 204, 21, 0.2);
-}
-
-/* Анимация для фильтрации */
-.table-row {
-  animation: fadeInUp 0.3s ease;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .td-actions {
@@ -713,24 +515,8 @@ async function loadAllConnectionFilesStatus() {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-.tooltip-fixed.error-tooltip {
-  border: 1px solid var(--color-accent);
-}
-
 .dataset-name {
   vertical-align: middle;
-}
-
-.alert-icon {
-  color: var(--color-accent);
-  cursor: pointer;
-  margin-left: 8px;
-  vertical-align: middle;
-  transition: color 0.2s ease;
-}
-
-.alert-icon:hover {
-  color: #ff5252;
 }
 
 .no-data {
@@ -755,12 +541,6 @@ async function loadAllConnectionFilesStatus() {
   transform: translateY(0);
 }
 
-/* Для избранных элементов кнопка звезды всегда видна */
-.actions-cell .action-btn.star.active {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
 .actions-inner {
   display: flex;
   gap: 8px;
@@ -782,39 +562,8 @@ async function loadAllConnectionFilesStatus() {
   color: var(--color-primary-text);
 }
 
-.action-btn.star {
-  opacity: 1;
-  pointer-events: auto;
-  transition: all 0.2s ease;
-}
-
-.action-btn.star:hover {
-  transform: scale(1.1);
-}
-
 .action-btn.star.active {
   color: #facc15;
-  animation: starPop 0.3s ease;
-  /* Для избранных элементов звезда всегда видна */
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-@keyframes starPop {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.3); }
-  100% { transform: scale(1); }
-}
-
-.action-btn.more {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-}
-
-.action-btn.more.visible {
-  opacity: 1;
-  pointer-events: auto;
 }
 
 .icon-inline {
@@ -853,10 +602,6 @@ async function loadAllConnectionFilesStatus() {
 .menu-item.danger {
   color: #f87171;
 }
-
-
-
-
 
 .fade-modal-enter-active,
 .fade-modal-leave-active {

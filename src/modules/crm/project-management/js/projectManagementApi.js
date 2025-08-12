@@ -18,13 +18,13 @@ class ProjectManagementApi {
             (config) => {
                 // Используем тот же способ получения токена, что и в manager.js
                 const token = Cookies.get('token');
-                
+
                 if (token) {
                     config.headers.Authorization = `Bearer ${token}`;
                 } else {
                     console.warn('Токен авторизации не найден!')
                 }
-                
+
                 return config;
             },
             (error) => {
@@ -117,21 +117,21 @@ class ProjectManagementApi {
 
     // КОММЕНТАРИИ
     async getTaskComments(taskId) {
-        return await this.client.get('/crm/task-comments/', {
-            params: { task_id: taskId }
-        });
+      return await this.client.get('/crm/task-comments/', { params: { task_id: taskId } });
     }
 
     async addTaskComment(taskId, content) {
-        return await this.client.post(`/crm/tasks/${taskId}/add_comment/`, { content });
+      // РАНЬШЕ было: POST /crm/tasks/${taskId}/add_comment/
+      // ТЕПЕРЬ:
+      return await this.client.post('/crm/task-comments/', { task_id: taskId, content });
     }
 
     async updateTaskComment(commentId, data) {
-        return await this.client.patch(`/crm/task-comments/${commentId}/`, data);
+      return await this.client.patch(`/crm/task-comments/${commentId}/`, data);
     }
 
     async deleteTaskComment(commentId) {
-        return await this.client.delete(`/crm/task-comments/${commentId}/`);
+      return await this.client.delete(`/crm/task-comments/${commentId}/`);
     }
 
     // УЧЕТ ВРЕМЕНИ
@@ -158,6 +158,18 @@ class ProjectManagementApi {
     // ПОЛЬЗОВАТЕЛИ
     async getUsers(params = {}) {
         return await this.client.get('/crm/users/', { params });
+    }
+
+    async getInvites() {
+        return await this.client.get('/crm/invites/');
+    }
+
+    async acceptInvite(token) {
+        return await this.client.post('/crm/invites/accept/', { token });
+    }
+
+    async declineInvite(token) {
+        return await this.client.post('/crm/invites/decline/', { token });
     }
 
     // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
@@ -187,9 +199,9 @@ class ProjectManagementApi {
             const tasks = tasksResponse.data.results || tasksResponse.data;
 
             const now = new Date();
-            const overdueTasks = tasks.filter(task => 
-                task.due_date && 
-                new Date(task.due_date) < now && 
+            const overdueTasks = tasks.filter(task =>
+                task.due_date &&
+                new Date(task.due_date) < now &&
                 task.status !== 'done'
             );
 
@@ -215,7 +227,7 @@ class ProjectManagementApi {
     // Поиск по проектам и задачам
     async search(query, type = 'all') {
         const params = { search: query };
-        
+
         if (type === 'projects') {
             return await this.getProjects(params);
         } else if (type === 'tasks') {
@@ -226,7 +238,7 @@ class ProjectManagementApi {
                 this.getProjects(params),
                 this.getTasks(params)
             ]);
-            
+
             return {
                 projects: projects.data.results || projects.data,
                 tasks: tasks.data.results || tasks.data
@@ -247,7 +259,7 @@ class ProjectManagementApi {
         if (projectId) {
             params.project_id = projectId;
         }
-        
+
         return await this.client.get('/crm/tasks/export/', {
             params,
             responseType: 'blob'
@@ -378,4 +390,4 @@ class ProjectManagementApi {
 }
 
 const projectManagementApi = new ProjectManagementApi();
-export default projectManagementApi; 
+export default projectManagementApi;

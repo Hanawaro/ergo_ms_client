@@ -11,7 +11,7 @@
         <div class="row g-3">
           <div class="col-md-3">
             <label class="form-label"><i class="fas fa-search me-1"></i>Поиск</label>
-            <input type="text" class="form-control" v-model="filters.search" @input="debouncedSearch" 
+            <input type="text" class="form-control" v-model="filters.search" @input="debouncedSearch"
                    placeholder="Поиск по названию...">
           </div>
           <div class="col-md-2">
@@ -83,10 +83,10 @@
             </div>
             <h5 class="project-title mb-0">{{ project.name || 'Без названия' }}</h5>
           </div>
-          
+
           <div class="project-body">
             <p class="project-description">{{ project.description || 'Нет описания' }}</p>
-            
+
             <!-- Прогресс -->
             <div class="progress-section">
               <div class="d-flex justify-content-between align-items-center mb-2">
@@ -94,13 +94,13 @@
                 <span class="progress-value">{{ project.progress || 0 }}%</span>
               </div>
               <div class="pm-progress">
-                <div class="progress-bar" 
+                <div class="progress-bar"
                      :style="{ width: (project.progress || 0) + '%' }"
                      :class="getProgressClass(project.progress || 0)">
                 </div>
               </div>
             </div>
-            
+
             <!-- Статистика -->
             <div class="project-stats">
               <div class="stat-item">
@@ -125,14 +125,14 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- Команда -->
             <div class="team-section" v-if="project.memberships && project.memberships.length > 0">
               <p class="text-muted small mb-2">Команда проекта:</p>
               <div class="team-avatars">
-                <img v-for="member in project.memberships.slice(0, 4)" 
+                <img v-for="member in project.memberships.slice(0, 4)"
                      :key="member.user?.id"
-                     :src="getAvatarUrl(member.user)" 
+                     :src="getAvatarUrl(member.user)"
                      :alt="member.user?.full_name"
                      class="pm-avatar"
                      :title="member.user?.full_name">
@@ -141,16 +141,16 @@
                 </span>
               </div>
             </div>
-            
+
             <!-- Даты -->
             <div class="project-dates" v-if="project.start_date || project.end_date">
               <i class="fas fa-calendar-alt text-muted me-2"></i>
               <small class="text-muted">{{ formatDateRange(project.start_date, project.end_date) }}</small>
             </div>
           </div>
-          
+
           <div class="project-footer">
-            <router-link :to="{ path: `/crm/project-management/project/${project.id}`, query: getProjectLinkQuery() }" 
+            <router-link :to="{ path: `/crm/project-management/project/${project.id}`, query: getProjectLinkQuery() }"
                          class="btn btn-open-project">
               <i class="fas fa-eye me-2"></i>Открыть проект
             </router-link>
@@ -171,21 +171,21 @@
     <nav v-if="pagination.total_pages > 1" class="mt-5">
       <ul class="pagination pagination-modern justify-content-center">
         <li class="page-item" :class="{ disabled: !pagination.previous }">
-          <button class="page-link" @click="changePage(pagination.current_page - 1)" 
+          <button class="page-link" @click="changePage(pagination.current_page - 1)"
                   :disabled="!pagination.previous">
             <i class="fas fa-chevron-left"></i>
           </button>
         </li>
-        
-        <li class="page-item" 
-            v-for="page in getPageNumbers()" 
+
+        <li class="page-item"
+            v-for="page in getPageNumbers()"
             :key="page"
             :class="{ active: page === pagination.current_page }">
           <button class="page-link" @click="changePage(page)">{{ page }}</button>
         </li>
-        
+
         <li class="page-item" :class="{ disabled: !pagination.next }">
-          <button class="page-link" @click="changePage(pagination.current_page + 1)" 
+          <button class="page-link" @click="changePage(pagination.current_page + 1)"
                   :disabled="!pagination.next">
             <i class="fas fa-chevron-right"></i>
           </button>
@@ -207,8 +207,19 @@
           <div class="modal-body p-4">
             <form @submit.prevent="submitProject">
               <div class="mb-4">
+                <label class="form-label fw-bold">Организация <span class="text-danger">*</span></label>
+                <select class="form-select" v-model="currentProject.organization_id" required>
+                  <option value="" disabled selected>Выберите организацию</option>
+                  <option v-for="org in userOrganizations"
+                          :key="org.id"
+                          :value="org.id">
+                    {{ org.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="mb-4">
                 <label class="form-label fw-bold">Название проекта <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" v-model="currentProject.name" required 
+                <input type="text" class="form-control" v-model="currentProject.name" required
                        placeholder="Введите название проекта">
               </div>
               <div class="mb-4">
@@ -253,6 +264,57 @@
                   <span class="text-muted">Выберите цвет для визуального выделения</span>
                 </div>
               </div>
+              <!-- Динамические поля из настроек -->
+              <div class="row g-3 mb-4" v-if="projectFieldSettings.length">
+                <template v-for="field in projectFieldSettings" :key="field.name">
+                  <div class="col-md-6" v-if="field.visible !== false">
+                    <label class="form-label fw-bold">
+                      {{ field.label }}
+                      <span v-if="field.required" class="text-danger">*</span>
+                    </label>
+
+                    <!-- text / number / date / datetime -->
+                    <input
+                      v-if="['text','number','date','datetime'].includes(field.type)"
+                      :type="field.type === 'datetime' ? 'datetime-local' : field.type"
+                      class="form-control"
+                      v-model="dynamicProjectFields[field.name]"
+                      :required="field.required"
+                    />
+
+                    <!-- textarea -->
+                    <textarea
+                      v-else-if="field.type === 'textarea'"
+                      class="form-control"
+                      rows="3"
+                      v-model="dynamicProjectFields[field.name]"
+                      :required="field.required"
+                    />
+
+                    <!-- checkbox -->
+                    <div v-else-if="field.type === 'checkbox'" class="form-check mt-2">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        :id="`fld_${field.name}`"
+                        v-model="dynamicProjectFields[field.name]"
+                      >
+                      <label class="form-check-label" :for="`fld_${field.name}`">
+                        {{ field.label }}
+                      </label>
+                    </div>
+
+                    <!-- fallback -->
+                    <input
+                      v-else
+                      type="text"
+                      class="form-control"
+                      v-model="dynamicProjectFields[field.name]"
+                      :required="field.required"
+                    />
+                  </div>
+                </template>
+              </div>
             </form>
           </div>
           <div class="modal-footer border-top">
@@ -271,8 +333,10 @@
 import { Modal } from 'bootstrap'
 import { Edit, Trash2 } from 'lucide-vue-next'
 import projectManagementApi from '@/modules/crm/project-management/js/projectManagementApi.js'
+import fieldsSettingsApi from '@/modules/crm/project-management/js/fieldsSettingsApi.js'
 import { useNotifications } from '@/modules/lms/composables/useNotifications'
 import { getAvatarUrl } from '@/modules/cms/js/avatarUtils.js'
+import organizationApi from "@/modules/crm/organizations/js/organizationApi.js";
 
 export default {
   name: 'ProjectsList',
@@ -308,28 +372,35 @@ export default {
         count: 0
       },
       currentProject: {
+        organization_id: '',
         name: '',
         description: '',
         start_date: '',
         end_date: '',
         status: 'planning',
         priority: 'medium',
-        color: '#007bff'
+        color: '#007bff',
+        custom_fields: {}
       },
       isEditing: false,
       searchTimeout: null,
-      // Динамические данные для статусов и приоритетов
+      // Динамические данные для статусов, приоритетов и организаций
       projectStatuses: [],
       projectPriorities: [],
-      loadingStatuses: false
+      userOrganizations: [],
+      loadingStatuses: false,
+      projectFieldSettings: [],
+      dynamicProjectFields: {},
+      loadingProjectFields: false,
+
     }
   },
-  
+
   async mounted() {
     this.loadProjects()
     this.loadStatusesAndPriorities()
   },
-  
+
   computed: {
     debouncedSearch() {
       return () => {
@@ -341,7 +412,7 @@ export default {
       }
     }
   },
-  
+
   methods: {
     async loadProjects() {
       this.loading = true
@@ -351,16 +422,16 @@ export default {
           page_size: 12,
           ...this.filters
         }
-        
+
         // Убираем пустые фильтры
         Object.keys(params).forEach(key => {
           if (params[key] === '' || params[key] === false) {
             delete params[key]
           }
         })
-        
+
         const response = await projectManagementApi.getProjects(params)
-        
+
         if (response.data.results) {
           this.projects = response.data.results
           this.pagination = {
@@ -384,24 +455,27 @@ export default {
     async loadStatusesAndPriorities() {
       try {
         this.loadingStatuses = true
-        const [statusesResponse, prioritiesResponse] = await Promise.all([
+        const [statusesResponse, prioritiesResponse, organizationsResponse] = await Promise.all([
           projectManagementApi.getProjectStatuses(),
-          projectManagementApi.getProjectPriorities()
+          projectManagementApi.getProjectPriorities(),
+          organizationApi.getOrganizations()
         ])
-        
+
         // Обрабатываем ответ - может быть массив или объект с results
-        this.projectStatuses = Array.isArray(statusesResponse.data) ? 
-          statusesResponse.data.filter(s => s.is_active) : 
+        this.projectStatuses = Array.isArray(statusesResponse.data) ?
+          statusesResponse.data.filter(s => s.is_active) :
           (statusesResponse.data.results || []).filter(s => s.is_active)
-          
-        this.projectPriorities = Array.isArray(prioritiesResponse.data) ? 
-          prioritiesResponse.data.filter(p => p.is_active) : 
+
+        this.projectPriorities = Array.isArray(prioritiesResponse.data) ?
+          prioritiesResponse.data.filter(p => p.is_active) :
           (prioritiesResponse.data.results || []).filter(p => p.is_active)
-        
+
+        this.userOrganizations = organizationsResponse.data
+
         // Устанавливаем значения по умолчанию если есть
         const defaultStatus = this.projectStatuses.find(s => s.is_default)
         const defaultPriority = this.projectPriorities.find(p => p.is_default)
-        
+
         if (defaultStatus && !this.isEditing) {
           this.currentProject.status = defaultStatus.code
         }
@@ -428,7 +502,7 @@ export default {
         this.loadingStatuses = false
       }
     },
-    
+
     changePage(page) {
       if (page >= 1 && page <= this.pagination.total_pages) {
         this.pagination.current_page = page
@@ -441,95 +515,115 @@ export default {
       await this.loadStatusesAndPriorities()
       console.log('Статусы и приоритеты проектов обновлены:', this.projectStatuses.length, this.projectPriorities.length)
     },
-    
+
     getPageNumbers() {
       const pages = []
       const current = this.pagination.current_page
       const total = this.pagination.total_pages
-      
+
       for (let i = Math.max(1, current - 2); i <= Math.min(total, current + 2); i++) {
         pages.push(i)
       }
-      
+
       return pages
     },
-    
+
     async createProject() {
       this.isEditing = false
-      
-      // Обновляем статусы и приоритеты перед созданием проекта
+
       await this.refreshStatusesAndPriorities()
-      
-      // Устанавливаем значения по умолчанию из загруженных данных
+
+      // значения по умолчанию
       const defaultStatus = this.projectStatuses.find(s => s.is_default) || this.projectStatuses[0]
       const defaultPriority = this.projectPriorities.find(p => p.is_default) || this.projectPriorities[0]
-      
+
       this.currentProject = {
+        organization_id: '',    // пользователь выберет
         name: '',
         description: '',
         start_date: '',
         end_date: '',
         status: defaultStatus ? defaultStatus.code : 'planning',
         priority: defaultPriority ? defaultPriority.code : 'medium',
-        color: '#007bff'
+        color: '#007bff',
+        custom_fields: {}
       }
-      
+
+      await this.loadProjectFieldSettings()
+
       const modal = new Modal(document.getElementById('projectModal'))
       modal.show()
     },
-    
-    editProject(project) {
+
+    async editProject(project) {
       this.isEditing = true
+      // сохраняем custom_fields, если бэк уже отдаёт
       this.currentProject = {
         id: project.id,
+        organization_id: project.organization?.id || project.organization_id || '',
         name: project.name,
         description: project.description,
         start_date: project.start_date,
         end_date: project.end_date,
         status: project.status,
         priority: project.priority,
-        color: project.color
+        color: project.color,
+        custom_fields: project.custom_fields || {}
       }
-      
+
+      await this.loadProjectFieldSettings()
+
       const modal = new Modal(document.getElementById('projectModal'))
       modal.show()
     },
-    
+
     async submitProject() {
       try {
-        // Подготавливаем данные проекта
-        const projectData = {
+        // валидация кастомных полей
+        const err = this.validateDynamicFields()
+        if (err) {
+          this.showError(err)
+          return
+        }
+
+        // базовые поля
+        const base = {
           ...this.currentProject,
-          // Конвертируем пустые строки в null для дат
+          // важно: API ожидает organization_id
+          organization_id: this.currentProject.organization_id,
           start_date: this.currentProject.start_date || null,
-          end_date: this.currentProject.end_date || null
+          end_date: this.currentProject.end_date || null,
         }
-        
+
+        // приклеиваем кастомные
+        const payload = {
+          ...base,
+          custom_fields: { ...(this.dynamicProjectFields || {}) }
+        }
+
         if (this.isEditing) {
-          await projectManagementApi.updateProject(projectData.id, projectData)
+          await projectManagementApi.updateProject(payload.id, payload)
         } else {
-          await projectManagementApi.createProject(projectData)
+          await projectManagementApi.createProject(payload)
         }
-        
-        // Закрываем модальное окно
+
+        // закрыть модалку
         const modal = Modal.getInstance(document.getElementById('projectModal'))
-        modal.hide()
-        
-        // Перезагружаем список
-        this.loadProjects()
-        
+        modal?.hide()
+
+        await this.loadProjects()
         this.showSuccess(this.isEditing ? 'Проект обновлен' : 'Проект создан')
       } catch (error) {
         console.error('Ошибка сохранения проекта:', error)
         this.showError('Ошибка сохранения проекта')
       }
     },
-    
+
     deleteProject(project) {
       this.currentProject = project
       this.confirmDeleteProject()
     },
-    
+
     async confirmDeleteProject() {
       const confirmed = await this.showConfirmDialog({
         title: 'Удаление проекта',
@@ -538,20 +632,20 @@ export default {
         cancelText: 'Отмена',
         variant: 'danger'
       })
-      
+
       if (confirmed) {
         try {
           await projectManagementApi.deleteProject(this.currentProject.id)
-          
+
           // Закрываем модальное окно если открыто
           const modal = Modal.getInstance(document.getElementById('projectModal'))
           if (modal) modal.hide()
-          
+
           this.closeConfirmDialog()
-          
+
           // Перезагружаем список
           this.loadProjects()
-          
+
           this.showSuccess('Проект удален')
         } catch (error) {
           console.error('Ошибка удаления проекта:', error)
@@ -560,7 +654,7 @@ export default {
         }
       }
     },
-    
+
     getStatusClass(status) {
       const classes = {
         'planning': 'bg-secondary',
@@ -571,12 +665,12 @@ export default {
       }
       return classes[status] || 'bg-secondary'
     },
-    
+
     getStatusText(status) {
       const statusObj = this.projectStatuses.find(s => s.code === status)
       return statusObj ? statusObj.name : status
     },
-    
+
     getPriorityClass(priority) {
       const classes = {
         'low': 'bg-light text-dark',
@@ -586,33 +680,33 @@ export default {
       }
       return classes[priority] || 'bg-light text-dark'
     },
-    
+
     getPriorityText(priority) {
       const priorityObj = this.projectPriorities.find(p => p.code === priority)
       return priorityObj ? priorityObj.name : priority
     },
-    
+
     getProgressClass(progress) {
       if (progress >= 80) return 'bg-success'
       if (progress >= 50) return 'bg-warning'
       return 'bg-danger'
     },
-    
+
     formatDateRange(startDate, endDate) {
       const formatDate = (date) => {
         if (!date) return null
         return new Date(date).toLocaleDateString('ru-RU')
       }
-      
+
       const start = formatDate(startDate)
       const end = formatDate(endDate)
-      
+
       if (start && end) return `${start} - ${end}`
       if (start) return `с ${start}`
       if (end) return `до ${end}`
       return 'Даты не указаны'
     },
-    
+
     getAvatarUrl(user) {
       // Используем локальную утилиту для генерации аватаров
       return getAvatarUrl(user, 32)
@@ -625,7 +719,68 @@ export default {
       }
       // Иначе не передаем query параметры (для "Мои проекты")
       return {}
-    }
+    },
+
+    async loadProjectFieldSettings() {
+      try {
+        this.loadingProjectFields = true
+        const { data } = await fieldsSettingsApi.getProjectFields()
+        const fields = Array.isArray(data?.fields) ? data.fields : (Array.isArray(data) ? data : [])
+        this.projectFieldSettings = fields.filter(f => f && (f.visible !== false))
+
+        // заполняем значения
+        if (this.isEditing) {
+          this.initDynamicFieldsFromProject()
+        } else {
+          this.initDynamicFieldsFromSettings()
+        }
+      } catch (e) {
+        console.error('Не удалось загрузить FieldSettings', e)
+        this.projectFieldSettings = []
+        this.dynamicProjectFields = {}
+      } finally {
+        this.loadingProjectFields = false
+      }
+    },
+
+    initDynamicFieldsFromSettings() {
+      const initial = {}
+      for (const f of this.projectFieldSettings) {
+        switch (f.type) {
+          case 'checkbox': initial[f.name] = false; break
+          case 'multiselect': initial[f.name] = []; break
+          default: initial[f.name] = ''
+        }
+      }
+      this.dynamicProjectFields = initial
+    },
+
+    // если проект уже содержит custom_fields (на будущее — когда бэк начнёт сохранять)
+    initDynamicFieldsFromProject() {
+      const src = this.currentProject?.custom_fields || {}
+      const initial = {}
+      for (const f of this.projectFieldSettings) {
+        let v = src[f.name]
+        if (v === undefined || v === null) {
+          v = (f.type === 'checkbox') ? false : (f.type === 'multiselect' ? [] : '')
+        }
+        initial[f.name] = v
+      }
+      this.dynamicProjectFields = initial
+    },
+
+    validateDynamicFields() {
+      for (const f of this.projectFieldSettings) {
+        if (f.required && f.visible !== false) {
+          const v = this.dynamicProjectFields[f.name]
+          const empty =
+            (f.type === 'checkbox') ? false : // чекбокс «пустым» не считаем
+              (Array.isArray(v) ? v.length === 0 : v === '' || v === null || v === undefined)
+          if (empty) return `Заполните поле "${f.label}"`
+        }
+      }
+      return null
+    },
   }
 }
 </script>
@@ -654,12 +809,12 @@ export default {
   display: flex;
   flex-direction: column;
   cursor: pointer;
-  
+
   .project-header {
     padding: 1.5rem;
     background: var(--bs-light);
     border-left: 4px solid;
-    
+
     .project-title {
       font-size: $font-size-h3;
       font-weight: $font-weight-bold;
@@ -667,13 +822,13 @@ export default {
       margin-bottom: 0;
     }
   }
-  
+
   .project-body {
     padding: 1.5rem;
     flex: 1;
     display: flex;
     flex-direction: column;
-    
+
     .project-description {
       font-size: $font-size-small;
       color: var(--bs-secondary-color);
@@ -684,15 +839,15 @@ export default {
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-    
+
     .progress-section {
       margin-bottom: 1.5rem;
-      
+
       .progress-value {
         font-weight: $font-weight-bold;
         color: var(--bs-primary);
       }
-      
+
       // Дополнительные стили для прогресс-бара
       .pm-progress {
         height: 6px;
@@ -700,25 +855,25 @@ export default {
         border-radius: 3px;
         overflow: hidden;
         position: relative;
-        
+
         .progress-bar {
           height: 100%;
           transition: width 0.3s ease;
           border-radius: 3px;
           position: relative;
-          
+
           &.bg-success {
             background-color: #28a745 !important;
           }
-          
+
           &.bg-warning {
             background-color: #ffc107 !important;
           }
-          
+
           &.bg-danger {
             background-color: #dc3545 !important;
           }
-          
+
           // Если класс не установлен, используем primary цвет
           &:not(.bg-success):not(.bg-warning):not(.bg-danger) {
             background-color: #007bff !important;
@@ -726,7 +881,7 @@ export default {
         }
       }
     }
-    
+
     .project-stats {
       display: flex;
       justify-content: space-around;
@@ -734,25 +889,25 @@ export default {
       margin-bottom: 1.5rem;
       border-top: 1px solid var(--bs-border-color);
       border-bottom: 1px solid var(--bs-border-color);
-      
+
       .stat-item {
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        
+
         i {
           font-size: 1.25rem;
         }
-        
+
         .stat-content {
           text-align: left;
-          
+
           .stat-value {
             font-size: 1.25rem;
             font-weight: $font-weight-bold;
             line-height: 1;
           }
-          
+
           .stat-label {
             font-size: $font-size-micro;
             color: var(--bs-secondary-color);
@@ -760,14 +915,14 @@ export default {
         }
       }
     }
-    
+
     .team-section {
       margin-bottom: 1rem;
-      
+
       .team-avatars {
         display: flex;
         align-items: center;
-        
+
         .avatar-more {
           display: inline-flex;
           align-items: center;
@@ -784,14 +939,14 @@ export default {
         }
       }
     }
-    
+
     .project-dates {
       margin-top: auto;
       font-size: $font-size-small;
       color: var(--bs-secondary-color);
     }
   }
-  
+
   .project-footer {
     padding: 1rem 1.5rem;
     background: var(--bs-gray-100);
@@ -799,12 +954,12 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    
+
     .project-actions {
       display: flex;
       gap: 0.5rem;
     }
-    
+
     // Кнопка "Открыть проект" - прямоугольная с закругленными концами
     .btn-open-project {
       display: inline-flex;
@@ -819,7 +974,7 @@ export default {
       text-decoration: none;
       transition: all 0.3s ease;
       box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
-      
+
       &:hover {
         background: #c82333;
         color: white;
@@ -827,17 +982,17 @@ export default {
         box-shadow: 0 4px 8px rgba(220, 53, 69, 0.4);
         text-decoration: none;
       }
-      
+
       &:active {
         transform: translateY(0);
         box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
       }
-      
+
       i {
         color: white;
         transition: transform 0.3s ease;
       }
-      
+
       &:hover i {
         transform: translateX(2px);
       }
@@ -857,16 +1012,16 @@ export default {
 .pagination-modern {
   .page-item {
     margin: 0 2px;
-    
+
     &:first-child .page-link {
       border-radius: $radius-small 0 0 $radius-small;
     }
-    
+
     &:last-child .page-link {
       border-radius: 0 $radius-small $radius-small 0;
     }
   }
-  
+
   .page-link {
     border: none;
     background: white;
@@ -875,24 +1030,24 @@ export default {
     font-weight: $font-weight-bold;
     box-shadow: $pm-card-shadow;
     transition: all $pm-transition;
-    
+
     &:hover {
       background: var(--bs-primary);
       color: white;
       transform: translateY(-2px);
       box-shadow: $pm-card-hover-shadow;
     }
-    
+
     &:focus {
       box-shadow: 0 0 0 0.2rem rgba($primary, 0.25);
     }
   }
-  
+
   .page-item.active .page-link {
     background: var(--bs-primary);
     color: white;
   }
-  
+
   .page-item.disabled .page-link {
     background: var(--bs-gray-200);
     opacity: 0.5;
@@ -909,7 +1064,7 @@ export default {
 .modal-header {
   background: var(--bs-light);
   padding: 1.5rem;
-  
+
   .modal-title {
     font-size: $font-size-h3;
     font-weight: $font-weight-bold;
@@ -927,7 +1082,7 @@ export default {
 .form-select {
   border-radius: $radius-small;
   border-color: var(--bs-border-color);
-  
+
   &:focus {
     border-color: var(--bs-primary);
     box-shadow: 0 0 0 0.2rem rgba($primary, 0.25);
@@ -946,22 +1101,22 @@ export default {
   .projects-list {
     padding: 1rem;
   }
-  
+
   .pm-page-header {
     flex-direction: column;
     gap: 1rem;
-    
+
     h2 {
       font-size: $font-size-h2;
     }
   }
-  
+
   .project-card {
     .project-stats {
       .stat-item {
         flex-direction: column;
         text-align: center;
-        
+
         .stat-content {
           text-align: center;
         }
@@ -969,4 +1124,4 @@ export default {
     }
   }
 }
-</style> 
+</style>

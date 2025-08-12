@@ -30,12 +30,16 @@
         </div>
       </div>
   
-      <div v-if="errorState" class="error-message">
+      <div v-if="isLoading" class="spinner-wrapper">
+        <div class="spinner"></div>
+      </div>
+  
+      <div v-else-if="errorState" class="error-message">
         <h2>Ошибка</h2>
         <p>{{ errorState }}</p>
       </div>
   
-      <table class="csv-table" v-if="columns.length && !errorState">
+      <table class="csv-table" v-else-if="columns.length">
         <thead>
           <tr>
             <th v-for="(col, index) in columns" :key="index">
@@ -72,16 +76,14 @@ import { ref, computed, watch, watchEffect, onMounted, onBeforeUnmount } from 'v
 import { apiClient } from '@/js/api/manager'
 import { endpoints } from '@/js/api/endpoints'
 
-const props = defineProps({ 
-  file: Object,
-  isLoading: Boolean
-})
+const props = defineProps({ file: Object })
 
 const encoding = ref('utf-8')
 const delimiter = ref(',')
 const hasHeader = ref(true)
 const searchQuery = ref('')
 const rawData = ref([])
+const isLoading = ref(false)
 const errorState = ref(null)
 
 const columnTypes = ref([])
@@ -148,6 +150,7 @@ function handleClickOutside(event) {
 
 async function fetchTxtPreview() {
   if (!props.file?.id) return
+  isLoading.value = true
   errorState.value = null
 
   try {
@@ -162,10 +165,13 @@ async function fetchTxtPreview() {
   } catch (e) {
     errorState.value = e.message
     rawData.value = []
+  } finally {
+    isLoading.value = false
   }
 }
 
 async function previewTxtLocally(file) {
+  isLoading.value = true
   errorState.value = null
 
   try {
@@ -191,6 +197,8 @@ async function previewTxtLocally(file) {
   } catch (err) {
     errorState.value = 'Ошибка чтения txt-файла: ' + err.message
     rawData.value = []
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -251,6 +259,29 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
   padding: 1rem;
   color: var(--color-primary-text);
   font-size: 0.9rem;
+}
+
+.spinner-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  height: 200px;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid var(--color-border);
+  border-top: 5px solid #10b981;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .error-message {

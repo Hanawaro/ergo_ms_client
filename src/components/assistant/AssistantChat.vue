@@ -36,7 +36,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, watch } from 'vue'
+import { ref, nextTick, defineEmits, watch } from 'vue'
 import { Bot, Send } from 'lucide-vue-next'
 import AssistantMessage from './AssistantMessage.vue'
 import AssistantTyping from './AssistantTyping.vue'
